@@ -8,10 +8,14 @@ public class PlayerController : MonoBehaviour
     [Header("Components")]
     [SerializeField] private Rigidbody rb;
     [SerializeField] private ParticleSystem thrusterParticles;
+    [SerializeField] private Transform cameraTransform; // Only rotate around z axis
     [Space(10)]
     [Header("Move Settings")]
     [SerializeField] private float force = 10f;
     [SerializeField] private float rotationSpeed = 10f;
+    [Space(10)]
+    [Header("Rotation Settings")]
+    [SerializeField] private float cameraRotationSpeed = 1f;
 
     // ___ Unity Methods ___
     private void Awake()
@@ -20,6 +24,11 @@ public class PlayerController : MonoBehaviour
         {
             rb = GetComponent<Rigidbody>();
         }
+    }
+
+    private void Update()
+    {
+        HandleRotation();
     }
 
     private void FixedUpdate()
@@ -47,5 +56,18 @@ public class PlayerController : MonoBehaviour
             var particleAmount = (int)(200 * Time.fixedDeltaTime);
             thrusterParticles.Emit(particleAmount);
         }
+    }
+
+    private void HandleRotation()
+    {
+        // Get rotation input
+        float rotationInput = InputManager.Instance.RotationInput * cameraRotationSpeed;
+
+        // If no rotation input, return
+        if (Mathf.Approximately(rotationInput, 0f))
+            return;
+
+        // Rotate the camera around the x-axis
+        cameraTransform.Rotate(Vector3.forward * rotationInput * Time.deltaTime, Space.Self);
     }
 }

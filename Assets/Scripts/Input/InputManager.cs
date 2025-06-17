@@ -9,9 +9,11 @@ public class InputManager : MonoBehaviour
     // ___ Private Fields ___
     private PlayerInputActions inputActions;
     private Vector2 moveInput;
+    private float rotationInput;
 
     // ___ Properties ___
     public Vector2 MoveInput => moveInput;
+    public float RotationInput => rotationInput;
 
     // ___ Initialize Instance ___
     private void Awake()
@@ -35,7 +37,10 @@ public class InputManager : MonoBehaviour
         {
             inputActions = new PlayerInputActions();
 
+            // Move Input
             inputActions.Player.Move.performed += ctx => moveInput = ctx.ReadValue<Vector2>();
+            // Rotation Input
+            inputActions.Player.Rotation.performed += ctx => rotationInput = ctx.ReadValue<float>();
 
             inputActions.Enable();
         }
