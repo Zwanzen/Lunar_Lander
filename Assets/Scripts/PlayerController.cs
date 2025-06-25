@@ -1,4 +1,3 @@
-using UnityEditor.ShaderGraph.Internal;
 using UnityEngine;
 
 public class PlayerController : MonoBehaviour
@@ -13,14 +12,31 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float force = 10f;
     [SerializeField] private float rotationSpeed = 10f;
 
+    // ___ Singelton ___
+    public static PlayerController Instance { get; private set; }
+
     // ___ Unity Methods ___
     private void Awake()
     {
+        // Ensure that there is only one instance of PlayerController
+        if (Instance == null)
+        {
+            Instance = this;
+            DontDestroyOnLoad(gameObject); // Keep this instance across scenes
+        }
+        else
+        {
+            Destroy(gameObject); // Destroy duplicate instances
+        }
+
         if (rb == null)
         {
             rb = GetComponent<Rigidbody>();
         }
     }
+
+    // ___ Properties ___
+    public Transform Transform => transform;
 
     private void FixedUpdate()
     {
