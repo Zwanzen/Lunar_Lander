@@ -7,14 +7,14 @@ using UnityEngine;
 public class Moon : MonoBehaviour
 {
     // ___ Singelton ___
-    public static Moon _instance { get; private set; }
+    public static Moon Instance { get; private set; }
 
     private void Awake()
     {
         // Ensure that there is only one instance of Moon
-        if (_instance == null)
+        if (Instance == null)
         {
-            _instance = this;
+            Instance = this;
             DontDestroyOnLoad(gameObject); // Optional: Keep this object across scene loads
         }
         else
@@ -25,5 +25,6 @@ public class Moon : MonoBehaviour
 
     // ___ Properties ___
     public Transform Transform => transform;
+    public Vector3 Position => transform.position;
 
 }

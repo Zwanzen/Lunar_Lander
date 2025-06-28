@@ -39,7 +39,7 @@ public class ShipManager : MonoBehaviour
     void Start()
     {
         // Initialize references
-        moonTransform = Moon._instance.Transform;
+        moonTransform = Moon.Instance.Transform;
         playerTransform = PlayerController.Instance.transform;
     }
 

@@ -12,6 +12,7 @@ public class InputManager : MonoBehaviour
 
     // ___ Properties ___
     public Vector2 MoveInput => moveInput;
+    public bool IsMoving => moveInput.y > 0;
 
     // ___ Initialize Instance ___
     private void Awake()
