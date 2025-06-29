@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 public class InputManager : MonoBehaviour
@@ -29,6 +30,9 @@ public class InputManager : MonoBehaviour
         }
     }
 
+    // ___ Event Actions ___
+    public Action FocusTarget;
+
     // ___ Initialize Inputs ___
     private void Start()
     {
@@ -37,6 +41,9 @@ public class InputManager : MonoBehaviour
             inputActions = new PlayerInputActions();
 
             inputActions.Player.Move.performed += ctx => moveInput = ctx.ReadValue<Vector2>();
+
+            // Subscribe to the FocusTarget action
+            inputActions.Player.FocusTarget.performed += ctx => FocusTarget?.Invoke();
 
             inputActions.Enable();
         }
