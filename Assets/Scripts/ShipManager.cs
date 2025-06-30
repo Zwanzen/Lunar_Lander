@@ -6,6 +6,7 @@ using UnityEngine;
 /// </summary>
 public class ShipManager : MonoBehaviour
 {
+    /*
     // ___ Variables ___
     [Header("Ship Settings")]
     [SerializeField] private float orbitalSpeed = 5f; // Speed at which the ship orbits the moon
@@ -114,4 +115,5 @@ public class ShipManager : MonoBehaviour
     {
         UpdateShipLocation();
     }
+    */
 }
