@@ -17,8 +17,13 @@ public class Moon : MonoBehaviour
     [SerializeField] private GameObject landingPointPrefab;
     [Space(10)]
     [Header("Moon Settings")]
+    [SerializeField] float moonGravity = 2f;
+    [SerializeField] float moonRange = 100f;
+    [SerializeField] float maxPoint = 0.4f; // Point in range [0-1] where gravity is maximum (0 = at source, 1 = at edge)
+    [Space(10)]
+    [Header("Moon Lading")]
     [SerializeField, Range(0f, 360f)] private float landingPointAngle = 0f;
-    [SerializeField] private float moonSize = 1f; // Used to raycast the surface of the moon.
+    [SerializeField] private float moonSize = 100f; // Used to raycast the surface of the moon.
 
     // ___ PRIVATE VARIABLES ___
     private Transform moonTransform;
@@ -27,8 +32,18 @@ public class Moon : MonoBehaviour
     // ___ UNITY METHODS ___
     private void OnValidate()
     {
+        if (Application.isPlaying)
+            return;
         ValidateMoonTransform();
         ManageLandingPoint();
+        RegisterGravitySource();
+    }
+
+    private void Start()
+    {
+        ValidateMoonTransform();
+        ManageLandingPoint();
+        RegisterGravitySource();
     }
 
     // ___ PRIVATE METHODS ___
@@ -41,14 +56,24 @@ public class Moon : MonoBehaviour
         }
         else
         {
-            // If there is no prefab, return false.
+            // If there is no prefab, use default moon prefab.
             if (moonPrefab == null)
             {
-                return;
+                // Get the default moon prefab from the resources folder.
+                moonPrefab = Resources.Load<GameObject>("DefaultMoon");
+
+                // If the default moon prefab is not found, log an error.
+                if (moonPrefab == null)
+                {
+                    Debug.LogError("Default moon prefab not found in Resources folder. Please ensure it exists.");
+                    return;
+                }
             }
 
             // If no child exists, instantiate a new moon prefab and set it as the first child.
-            moonTransform = Instantiate(moonPrefab, transform.position, moonPrefab.transform.rotation, transform).transform;
+            // We need to add this rotation with the moon prefab's rotation to ensure it is correctly oriented.
+            Quaternion moonRotation = transform.rotation * moonPrefab.transform.rotation;
+            moonTransform = Instantiate(moonPrefab, transform.position, moonRotation, transform).transform;
             // Rename the instantiated moon transform.
             moonTransform.name = "MoonTransform";
             // Make sure it is child index 0.
@@ -75,10 +100,17 @@ public class Moon : MonoBehaviour
         }
         else
         {
-            // If there is no prefab, return.
+            // If there is no prefab, load the default landing point prefab from resources.
             if (landingPointPrefab == null)
             {
-                return;
+                // Get the default landing point prefab from the resources folder.
+                landingPointPrefab = Resources.Load<GameObject>("DefaultPoint");
+                // If the default landing point prefab is not found, log an error.
+                if (landingPointPrefab == null)
+                {
+                    Debug.LogError("Default landing point prefab not found in Resources folder. Please ensure it exists.");
+                    return;
+                }
             }
             // If no child exists, instantiate a new landing point prefab and set it as the second child.
             landingPointTransform = Instantiate(landingPointPrefab, transform.position, landingPointPrefab.transform.rotation, transform).transform;
@@ -104,17 +136,56 @@ public class Moon : MonoBehaviour
             Debug.LogWarning("No surface found.");
             return;
         }
-        // Set the landing point position to the first hit point that has the "Moon" tag.
+        // Set the landing point position to the first hit point that hits this moon.
         for (int i = 0; i < hitCount; i++)
         {
-            if (moonSurfaceColliders[i].collider.CompareTag("Moon"))
+            RaycastHit hit = moonSurfaceColliders[i];
+            if (hit.collider != null && hit.collider.transform == moonTransform)
             {
-                landingPointTransform.position = moonSurfaceColliders[i].point;
-                landingPointTransform.rotation = Quaternion.LookRotation(moonSurfaceColliders[i].normal);
+                // Set the landing point position to the hit point.
+                landingPointTransform.position = hit.point;
+                // Set the landing point rotation to face upwards.
+                landingPointTransform.rotation = Quaternion.LookRotation(hit.normal, Vector3.up);
                 return;
             }
         }
+
         // If no valid hit was found, log a warning.
         Debug.LogWarning("No valid surface found for landing point.");
     }
+
+    private void RegisterGravitySource()
+    {
+        // Register this moon as a gravity source in the PhysicsManager.
+        if (PhysicsManager.Instance == null)
+        {
+            Debug.LogError("PhysicsManager instance not found. Please ensure it is initialized before registering gravity sources.");
+            return;
+        }
+        GravitySource gravitySource = new GravitySource
+        {
+            source = moonTransform,
+            gravity = moonGravity,
+            range = moonRange,
+            maxGravityPoint = maxPoint
+        };
+        PhysicsManager.Instance.AddGravitySource(gravitySource);
+    }
+
+    private void UnregisterGravitySource()
+    {
+        // Unregister this moon as a gravity source in the PhysicsManager.
+        if (PhysicsManager.Instance == null)
+        {
+            Debug.LogError("PhysicsManager instance not found. Please ensure it is initialized before unregistering gravity sources.");
+            return;
+        }
+        PhysicsManager.Instance.RemoveGravitySource(moonTransform);
+    }
+
+    private void OnDestroy()
+    {
+        UnregisterGravitySource();
+    }
+
 }

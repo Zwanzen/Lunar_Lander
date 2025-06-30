@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Generic;
+using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
 
 [Serializable]
-struct GravitySource
+public struct GravitySource
 {
     public Transform source;
     public float gravity;
@@ -13,13 +15,15 @@ struct GravitySource
 
 public class PhysicsManager : MonoBehaviour
 {
-    // ___ Private Fields ___
+    // ___ PRIVATE FIELDS ___
     [Header("Physics Settings")]
-    [SerializeField] private GravitySource[] gravitySources;
+    [SerializeField] private Dictionary<Transform, GravitySource> gravitySources
+        = new Dictionary<Transform, GravitySource>();
     [Space(2)]
     [SerializeField] private Rigidbody[] gravityObjects;
 
     [Header("Debug Visualization")]
+    [SerializeField] private bool unregisterAll = false;
     [SerializeField] private bool showGravityRanges = true;
     [SerializeField] private bool showGravityStrength = true;
     [SerializeField] private int visualizationDetail = 20; // Detail level for visualization
@@ -27,34 +31,47 @@ public class PhysicsManager : MonoBehaviour
     [SerializeField] private Color strengthColor = new Color(1f, 0.3f, 0.3f, 0.4f);
     [SerializeField] private bool use2DVisualization = true; // Optimized for 2.5D view
 
-    // ___ Singleton Instance ___
+    // ___ INSTANCE ___
     public static PhysicsManager Instance { get; private set; }
 
-    // ___ Initialize Instance ___
     private void Awake()
     {
         // Ensure that there is only one instance of PhysicsManager
         if (Instance == null)
-        {
             Instance = this;
-            DontDestroyOnLoad(gameObject); // Keep this instance across scenes
-        }
         else
-        {
             Destroy(gameObject); // Destroy duplicate instances
-        }
     }
 
     // ___ Unity Methods ___
+
+    private void OnValidate()
+    {
+        if(Application.isPlaying)
+            return;
+
+        if(unregisterAll)
+        {
+            gravitySources.Clear();
+            unregisterAll = false; // Reset the flag
+        }
+
+        // Ensure that there is only one instance of PhysicsManager
+        if (Instance == null)
+            Instance = this;
+        else
+            Destroy(gameObject); // Destroy duplicate instances
+    }
+
     private void FixedUpdate()
     {
         ApplyGravity();
     }
 
-    // ___ Private Methods ___
+    // ___ PRIVATE METHODS ___
     private void ApplyGravity()
     {
-        if (gravityObjects.Length == 0 || gravitySources.Length == 0)
+        if (gravityObjects.Length == 0 || gravitySources.Count == 0)
         {
             return; // No objects to apply gravity to or no gravity sources
         }
@@ -67,11 +84,9 @@ public class PhysicsManager : MonoBehaviour
             }
 
             // Apply gravity from each source
-            foreach (GravitySource source in gravitySources)
+            foreach (KeyValuePair<Transform, GravitySource> pair in gravitySources)
             {
-                if (source.source == null)
-                    continue;
-
+                var source = pair.Value;
                 // Calculate direction and distance to source
                 Vector3 direction = source.source.position - rb.position;
                 float distance = direction.magnitude;
@@ -106,16 +121,45 @@ public class PhysicsManager : MonoBehaviour
         }
     }
 
+    // ___ PUBLIC METHODS ___
+    public void AddGravitySource(GravitySource moon)
+    {
+        // Check if it already exists
+        if(gravitySources.ContainsKey(moon.source))
+        {
+            GravitySource existingSource = gravitySources[moon.source];
+            existingSource.gravity = moon.gravity;
+            existingSource.range = moon.range;
+            existingSource.maxGravityPoint = Mathf.Clamp01(moon.maxGravityPoint); // Ensure it's between 0 and 1
+            gravitySources[moon.source] = existingSource; // Update the dictionary entry
+            return;
+        }
+
+        gravitySources.Add(moon.source, moon);
+    }
+
+    public void RemoveGravitySource(Transform Source)
+    {
+        if (gravitySources.ContainsKey(Source))
+        {
+            gravitySources.Remove(Source);
+        }
+        else
+        {
+            Debug.LogWarning($"Gravity source {Source.name} does not exist.");
+        }
+    }
+
     // ___ Gizmo Visualization ___
     private void OnDrawGizmos()
     {
         if (!showGravityRanges && !showGravityStrength)
             return;
 
-        foreach (GravitySource source in gravitySources)
+        foreach (KeyValuePair<Transform, GravitySource> pair in gravitySources)
         {
-            if (source.source == null)
-                continue;
+
+            var source = pair.Value;
 
             Vector3 position = source.source.position;
 
