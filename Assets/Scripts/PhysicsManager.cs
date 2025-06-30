@@ -23,7 +23,7 @@ public class PhysicsManager : MonoBehaviour
     [SerializeField] private Rigidbody[] gravityObjects;
 
     [Header("Debug Visualization")]
-    [SerializeField] private bool unregisterAll = false;
+    [SerializeField] private bool restart = false;
     [SerializeField] private bool showGravityRanges = true;
     [SerializeField] private bool showGravityStrength = true;
     [SerializeField] private int visualizationDetail = 20; // Detail level for visualization
@@ -50,17 +50,21 @@ public class PhysicsManager : MonoBehaviour
         if(Application.isPlaying)
             return;
 
-        if(unregisterAll)
+        if(restart)
         {
             gravitySources.Clear();
-            unregisterAll = false; // Reset the flag
+            restart = false; // Reset the flag
+            if(Instance != null)
+            {
+                Instance = null; // Reset the instance to allow reinitialization
+            }
         }
 
         // Ensure that there is only one instance of PhysicsManager
         if (Instance == null)
             Instance = this;
         else
-            Destroy(gameObject); // Destroy duplicate instances
+            DestroyImmediate(gameObject); // Destroy duplicate instances
     }
 
     private void FixedUpdate()
@@ -148,6 +152,11 @@ public class PhysicsManager : MonoBehaviour
         {
             Debug.LogWarning($"Gravity source {Source.name} does not exist.");
         }
+    }
+
+    public void ClearGravitySources()
+    {
+        gravitySources.Clear();
     }
 
     // ___ Gizmo Visualization ___

@@ -22,21 +22,68 @@ public class Moon : MonoBehaviour
     [SerializeField] float maxPoint = 0.4f; // Point in range [0-1] where gravity is maximum (0 = at source, 1 = at edge)
     [Space(10)]
     [Header("Moon Lading")]
-    [SerializeField, Range(0f, 360f)] private float landingPointAngle = 0f;
+    [SerializeField] private float landingPointAngle = 0f;
     [SerializeField] private float moonSize = 100f; // Used to raycast the surface of the moon.
+    [Space(20)]
+    [Header("Debug")]
+    [SerializeField] private bool reGenerateMoon = false;
+    [SerializeField] private bool displayRay = false;
 
     // ___ PRIVATE VARIABLES ___
     private Transform moonTransform;
     private Transform landingPointTransform;
+
+    // ___ PROPERTIES ___
+    public Transform MoonTransform => moonTransform;
+    public Vector3 Position => moonTransform.position;
+    public Transform LandingPoint => landingPointTransform;
 
     // ___ UNITY METHODS ___
     private void OnValidate()
     {
         if (Application.isPlaying)
             return;
+
+        // If reGenerateMoon is true, reset the moon
+        if(reGenerateMoon)
+        {
+            reGenerateMoon = false; // Reset the flag
+            if(PhysicsManager.Instance != null)
+            {
+                PhysicsManager.Instance.ClearGravitySources();
+            }
+            Destroy(moonTransform?.gameObject); // Destroy the old moon transform
+            Destroy(landingPointTransform?.gameObject); // Destroy the old landing point transform
+        }
+
+        // Make sure the angle is not above 360 degrees or below 0 degrees.
+        landingPointAngle = Mathf.Repeat(landingPointAngle, 360f);
+
         ValidateMoonTransform();
         ManageLandingPoint();
         RegisterGravitySource();
+    }
+
+    private void Awake()
+    {
+        // Get moontransform from the first child if it exists.
+        if (transform.childCount > 0)
+        {
+            moonTransform = transform.GetChild(0);
+        }
+        else
+        {
+            Debug.LogError("Moon Transform is not set. Please validate the moon transform.");
+        }
+        // Get landing point transform from the second child if it exists.
+        if (transform.childCount > 1)
+        {
+            landingPointTransform = transform.GetChild(1);
+        }
+        else
+        {
+            Debug.LogError("Landing Point Transform is not set. Please validate the landing point transform.");
+        }
     }
 
     private void Start()
@@ -124,10 +171,13 @@ public class Moon : MonoBehaviour
         Vector3 rayDirection = Quaternion.Euler(0f, 0f, landingPointAngle) * Vector3.up;
         Vector3 rayOrigin = moonTransform.position + rayDirection * moonSize;
 
-        // Debug the ray with two colors
-        Vector3 midpoint = rayOrigin - rayDirection * moonSize; // Midpoint of the ray
-        Debug.DrawRay(rayOrigin, -rayDirection * moonSize, Color.green, 2f); // First half in green
-        Debug.DrawRay(midpoint, -rayDirection * moonSize, Color.yellow, 2f); // Second half in yellow
+        if (displayRay)
+        {
+            // Debug the ray with two colors
+            Vector3 midpoint = rayOrigin - rayDirection * moonSize; // Midpoint of the ray
+            Debug.DrawRay(rayOrigin, -rayDirection * moonSize, Color.green, 2f); // First half in green
+            Debug.DrawRay(midpoint, -rayDirection * moonSize, Color.yellow, 2f); // Second half in yellow
+        }
 
         // Cast a ray from the moon's position to find the surface.
         int hitCount = Physics.RaycastNonAlloc(rayOrigin, -rayDirection, moonSurfaceColliders, moonSize * 2f);
@@ -159,7 +209,6 @@ public class Moon : MonoBehaviour
         // Register this moon as a gravity source in the PhysicsManager.
         if (PhysicsManager.Instance == null)
         {
-            Debug.LogError("PhysicsManager instance not found. Please ensure it is initialized before registering gravity sources.");
             return;
         }
         GravitySource gravitySource = new GravitySource
@@ -177,7 +226,6 @@ public class Moon : MonoBehaviour
         // Unregister this moon as a gravity source in the PhysicsManager.
         if (PhysicsManager.Instance == null)
         {
-            Debug.LogError("PhysicsManager instance not found. Please ensure it is initialized before unregistering gravity sources.");
             return;
         }
         PhysicsManager.Instance.RemoveGravitySource(moonTransform);
