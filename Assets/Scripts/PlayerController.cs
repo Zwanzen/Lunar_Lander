@@ -15,7 +15,8 @@ public class PlayerController : MonoBehaviour
     [Space(10)]
     [Header("Path Render Settings")]
     [SerializeField] private int pathResolution = 100;
-    [SerializeField] private float tickRate = 0.1f; // Time between path points in seconds
+    [SerializeField] private float tickRate = 0.1f; 
+    [SerializeField] private LayerMask pathObstructionMask; 
 
 
     // ___ PRIVATE ___
@@ -107,22 +108,52 @@ public class PlayerController : MonoBehaviour
 
         // Create a list to hold the path points
         Vector3[] pathPoints = new Vector3[pathResolution];
+        // Set the first point to the current position
+        pathPoints[0] = ship.Position;
+
+        // Track the actual number of points we'll display
+        int actualPoints = pathResolution;
+
         // Loop through the path points
-        for (int i = 0; i < pathResolution; i++)
+        for (int i = 1; i < pathResolution; i++)
         {
-            // Calculate the time for this point
-            float time = i * tickRate;
+            Vector3 prevPosition = ship.Position;
+
             // Calculate the new position based on the velocity and gravity
             Vector3 acceleration = physicsManager.GetGravityAtPoint(ship.Position) / ship.Mass;
             ship.Velocity += acceleration * tickRate;
             ship.Position += ship.Velocity * tickRate;
+
+            // Check if the path is obstructed between the previous point and current point
+            Vector3 hitPoint;
+            if (PathObstructed(prevPosition, ship.Position, out hitPoint))
+            {
+                // If obstructed, set the hit point as the final point and exit early
+                pathPoints[i] = hitPoint;
+                actualPoints = i + 1; // +1 to include the hit point
+                break;
+            }
+
             // Store the position in the path points array
             pathPoints[i] = ship.Position;
         }
 
         // Update the line renderer with the path points
-        pathRenderer.positionCount = pathPoints.Length;
+        pathRenderer.positionCount = actualPoints;
         pathRenderer.SetPositions(pathPoints);
+    }
+
+    private bool PathObstructed(Vector3 start, Vector3 end, out Vector3 hitPoint)
+    {
+        // Cast a ray from start to end and check if it hits anything
+        RaycastHit hit;
+        hitPoint = Vector3.zero;
+        if (Physics.Raycast(start, end - start, out hit, Vector3.Distance(start, end), pathObstructionMask))
+        {
+            hitPoint = hit.point; // Set the hit point to the point of impact
+            return true; // Path is obstructed
+        }
+        return false; // Path is clear
     }
 
 }

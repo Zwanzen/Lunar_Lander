@@ -127,6 +127,8 @@ public class Moon : MonoBehaviour
             moonTransform.SetSiblingIndex(0);
             // Set the moon tag to "Moon" for identification.
             moonTransform.tag = "Moon";
+            // Set the moons layer to 3 (Ground Layer)
+            moonTransform.gameObject.layer = LayerMask.NameToLayer("Ground");
         }
     }
 
