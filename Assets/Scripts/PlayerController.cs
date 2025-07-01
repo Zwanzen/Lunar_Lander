@@ -13,13 +13,14 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float force = 10f;
     [SerializeField] private float rotationSpeed = 10f;
     [Space(10)]
-    [Header("Float Settings")]
-    [SerializeField] private LayerMask ground;
-    [SerializeField] private float rayDistance = 1f;
-    [SerializeField] private float spring = 5f;
-    [SerializeField] private float damping = 1f;
-    [SerializeField] private float floatHeight = 0.5f;
-    [SerializeField] private float drag = 0.5f;
+    [Header("Path Render Settings")]
+    [SerializeField] private int pathResolution = 100;
+    [SerializeField] private float tickRate = 0.1f; // Time between path points in seconds
+
+
+    // ___ PRIVATE ___
+    private LineRenderer pathRenderer;
+    private PhysicsManager physicsManager;
 
     // ___ Singelton ___
     public static PlayerController Instance { get; private set; }
@@ -44,13 +45,19 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    private void Start()
+    {
+        pathRenderer = GetComponent<LineRenderer>();
+        physicsManager = PhysicsManager.Instance;
+    }
+
     // ___ Properties ___
     public Transform Transform => transform;
 
     private void FixedUpdate()
     {
         HandleMovement();
-        //HandleLand();
+        HandleShipPath();
     }
 
     // ___ Private Methods ___
@@ -75,54 +82,47 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    [Obsolete("We use static colliders instead")]
-    private void HandleLand()
+    private struct SimObject
     {
-        // Check if there is ground under us with a raycast
-        // If not, return and do not apply any force
-        Vector3 rayDir = -Transform.up;
-        if (!Physics.Raycast(Transform.position, rayDir, out var hit, rayDistance, ground))
-            return;
-
-        // Get velocities
-        Vector3 vel = rb.linearVelocity;
-        float rayDirVel = Vector3.Dot(vel, rayDir);
-
-        // Using Toyful Games Spring Logic
-        float x = hit.distance - floatHeight; 
-        float springForce = (x * spring) - (rayDirVel * damping);
-
-        // If we are thrusting, we dont want to apply force in down direction
-        // Though the legs should still add upward force as if the legs are catching us
-        var isMoving = InputManager.Instance.IsMoving;
-
-        // Find out if spring force is positive or negative
-        // If positive and moving, we want to return
-        if (springForce > 0 && isMoving)
-            return;
-
-        // Apply spring force
-        rb.AddForce(rayDir * springForce);
-
-        // Now we need to apply a drag force to stop the player from sliding around
-        // Get the horizontal velocity
-        Vector3 horizontalVel = new Vector3(vel.x, 0, vel.z);
-        // Calculate the drag force to try and stop the player from sliding around
-        Vector3 dragForce = -horizontalVel.normalized * horizontalVel.magnitude * drag;
-        // Apply the drag force
-        rb.AddForce(dragForce, ForceMode.Force);
-
-        // Rotate the player to align with the ground normal but only around the z-axis
-        Vector3 groundNormal = hit.normal;
-        Quaternion targetRotation = Quaternion.FromToRotation(Vector3.up, groundNormal);
-        Quaternion currentRotation = Transform.rotation;
-        // Calculate the new rotation
-        Quaternion newRotation = Quaternion.Slerp(currentRotation, targetRotation, Time.fixedDeltaTime * rotationSpeed);
-        // Apply the new rotation
-        Transform.rotation = Quaternion.Euler(0, 0, newRotation.eulerAngles.z);
-
-
-        // Display debug ray
-        Debug.DrawLine(Transform.position, Transform.position + rayDir * rayDistance, Color.yellow);
+        public Vector3 Position;
+        public Vector3 Velocity;
+        public float Mass;
     }
+
+    /// <summary>
+    /// Simulates the ship's path based on its current velocity and position.
+    /// It takes into account every gravity source in the scene.
+    /// It also is adjustable per tick rate and resolution.
+    /// </summary>
+    private void HandleShipPath()
+    {
+        // Define our sim object
+        // This will be used to simulate the ship's path
+        SimObject ship = new SimObject
+        {
+            Position = transform.position,
+            Velocity = rb.linearVelocity,
+            Mass = rb.mass
+        };
+
+        // Create a list to hold the path points
+        Vector3[] pathPoints = new Vector3[pathResolution];
+        // Loop through the path points
+        for (int i = 0; i < pathResolution; i++)
+        {
+            // Calculate the time for this point
+            float time = i * tickRate;
+            // Calculate the new position based on the velocity and gravity
+            Vector3 acceleration = physicsManager.GetGravityAtPoint(ship.Position) / ship.Mass;
+            ship.Velocity += acceleration * tickRate;
+            ship.Position += ship.Velocity * tickRate;
+            // Store the position in the path points array
+            pathPoints[i] = ship.Position;
+        }
+
+        // Update the line renderer with the path points
+        pathRenderer.positionCount = pathPoints.Length;
+        pathRenderer.SetPositions(pathPoints);
+    }
+
 }

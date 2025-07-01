@@ -126,6 +126,42 @@ public class PhysicsManager : MonoBehaviour
     }
 
     // ___ PUBLIC METHODS ___
+    public Vector3 GetGravityAtPoint(Vector3 point)
+    {
+        Vector3 totalGravity = Vector3.zero;
+        foreach (KeyValuePair<Transform, GravitySource> pair in gravitySources)
+        {
+            var source = pair.Value;
+            // Calculate direction and distance to source
+            Vector3 direction = source.source.position - point;
+            float distance = direction.magnitude;
+            // Check if point is within range
+            if (distance <= source.range)
+            {
+                // Normalize direction
+                direction.Normalize();
+                // Calculate gravity strength based on distance and maxGravityPoint
+                float gravityStrength;
+                float maxGravityDistance = source.range * source.maxGravityPoint;
+                if (distance <= maxGravityDistance)
+                {
+                    // Before the max gravity point - increasing gravity
+                    float t = distance / maxGravityDistance;
+                    gravityStrength = source.gravity * t;
+                }
+                else
+                {
+                    // After the max gravity point - decreasing gravity
+                    float t = (distance - maxGravityDistance) / (source.range - maxGravityDistance);
+                    gravityStrength = source.gravity * (1f - t);
+                }
+                // Add the gravitational force to the total
+                totalGravity += direction * gravityStrength;
+            }
+        }
+        return totalGravity;
+    }
+
     public void AddGravitySource(GravitySource moon)
     {
         // Check if it already exists
