@@ -16,12 +16,18 @@ public class PlayerController : MonoBehaviour
     [Header("Path Render Settings")]
     [SerializeField] private int pathResolution = 100;
     [SerializeField] private float tickRate = 0.1f; 
-    [SerializeField] private LayerMask pathObstructionMask; 
+    [SerializeField] private LayerMask pathObstructionMask;
 
 
     // ___ PRIVATE ___
     private LineRenderer pathRenderer;
     private PhysicsManager physicsManager;
+    // Suggestions from copilot on optimization
+    private SimObject _shipSimObject;
+    private Vector3[] _pathPoints;
+    private RaycastHit _raycastHitValue;
+    private RaycastHit? _raycastHit;
+
 
     // ___ Singelton ___
     public static PlayerController Instance { get; private set; }
@@ -97,63 +103,112 @@ public class PlayerController : MonoBehaviour
     /// </summary>
     private void HandleShipPath()
     {
-        // Define our sim object
-        // This will be used to simulate the ship's path
-        SimObject ship = new SimObject
-        {
-            Position = transform.position,
-            Velocity = rb.linearVelocity,
-            Mass = rb.mass
-        };
+        // Initialize simulation object with current ship data
+        // Make sure _shipSimObject is initialized in Awake or Start
+        _shipSimObject.Position = transform.position;
+        _shipSimObject.Velocity = rb.linearVelocity;
+        _shipSimObject.Mass = rb.mass;
 
-        // Create a list to hold the path points
-        Vector3[] pathPoints = new Vector3[pathResolution];
+        // Initialize or resize path points array only when resolution changes
+        if (_pathPoints == null || _pathPoints.Length != pathResolution)
+        {
+            _pathPoints = new Vector3[pathResolution];
+        }
+
         // Set the first point to the current position
-        pathPoints[0] = ship.Position;
+        _pathPoints[0] = _shipSimObject.Position;
 
         // Track the actual number of points we'll display
         int actualPoints = pathResolution;
 
+        // Cache values to avoid repeated property access
+        float tickRateValue = tickRate;
+        float shipMass = _shipSimObject.Mass;
+        Vector3 directionVector = Vector3.zero;
+        Vector3 shipPosition = _shipSimObject.Position;
+        Vector3 shipVelocity = _shipSimObject.Velocity;
+
+        // To only display the line renderer when it hits an obstruction
+        bool pathHit = false;
+
         // Loop through the path points
         for (int i = 1; i < pathResolution; i++)
         {
-            Vector3 prevPosition = ship.Position;
+            Vector3 prevPosition = shipPosition;
 
             // Calculate the new position based on the velocity and gravity
-            Vector3 acceleration = physicsManager.GetGravityAtPoint(ship.Position) / ship.Mass;
-            ship.Velocity += acceleration * tickRate;
-            ship.Position += ship.Velocity * tickRate;
+            Vector3 acceleration = physicsManager.GetGravityAtPoint(shipPosition) / shipMass;
+            shipVelocity += acceleration * tickRateValue;
+            shipPosition += shipVelocity * tickRateValue;
+
+            // Update the struct values
+            _shipSimObject.Position = shipPosition;
+            _shipSimObject.Velocity = shipVelocity;
 
             // Check if the path is obstructed between the previous point and current point
-            Vector3 hitPoint;
-            if (PathObstructed(prevPosition, ship.Position, out hitPoint))
+            // Avoid creating a new vector in the calculation
+            directionVector = shipPosition - prevPosition;
+            float distance = directionVector.magnitude;
+            if (distance > 0)
             {
-                // If obstructed, set the hit point as the final point and exit early
-                pathPoints[i] = hitPoint;
-                actualPoints = i + 1; // +1 to include the hit point
-                break;
+                directionVector /= distance; // Normalize without creating a new vector
+
+                // Use the cached vector for the raycast direction
+                if (PathObstructed(prevPosition, directionVector, distance, out Vector3 hitPoint))
+                {
+                    // If obstructed, set the hit point as the final point and exit early
+                    _pathPoints[i] = hitPoint;
+                    actualPoints = i + 1; // +1 to include the hit point
+                    pathHit = true; // Mark that we hit an obstruction
+                    break;
+                }
             }
 
             // Store the position in the path points array
-            pathPoints[i] = ship.Position;
+            _pathPoints[i] = shipPosition;
+        }
+
+        // If we didn't hit an obstruction, we turn off the path renderer
+        // And dont update the line renderer
+        if (!pathHit)
+        {
+            // If the path renderer is enabled, disable it to avoid rendering an empty path
+            if (pathRenderer.enabled)
+            {
+                pathRenderer.enabled = false;
+            }
+            return; // Exit early if no obstruction was hit
+        }
+
+        // If the path renderer is not enabled, enable it
+        if (!pathRenderer.enabled)
+        {
+            pathRenderer.enabled = true;
         }
 
         // Update the line renderer with the path points
-        pathRenderer.positionCount = actualPoints;
-        pathRenderer.SetPositions(pathPoints);
+        if (pathRenderer.positionCount != actualPoints)
+            pathRenderer.positionCount = actualPoints;
+
+        // Use the version of SetPositions that uses a pre-allocated array
+        pathRenderer.SetPositions(_pathPoints);
     }
 
-    private bool PathObstructed(Vector3 start, Vector3 end, out Vector3 hitPoint)
+    private bool PathObstructed(Vector3 start, Vector3 direction, float distance, out Vector3 hitPoint)
     {
-        // Cast a ray from start to end and check if it hits anything
-        RaycastHit hit;
+        // Reuse the same RaycastHit instance to avoid allocation
+        if (_raycastHit == null)
+            _raycastHit = new RaycastHit();
+
         hitPoint = Vector3.zero;
-        if (Physics.Raycast(start, end - start, out hit, Vector3.Distance(start, end), pathObstructionMask))
+
+        if (Physics.Raycast(start, direction, out _raycastHitValue, distance, pathObstructionMask))
         {
-            hitPoint = hit.point; // Set the hit point to the point of impact
-            return true; // Path is obstructed
+            hitPoint = _raycastHitValue.point; 
+            return true; 
         }
-        return false; // Path is clear
+        return false;
     }
+
 
 }
