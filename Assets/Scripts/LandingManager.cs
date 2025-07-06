@@ -16,8 +16,8 @@ public class LandingManager : MonoBehaviour
     private GameManager gameManager;
 
     private Transform currentLandingPoint = null;
-    private float landingRange = 1f;
-    private float timeToLand = 1.0f;
+    private float landingRange = 7f;
+    private const float TimeToLand = 1.0f;
     private float timerToLand = 0.0f; // When this reaches timeToLand, the ship is considered landed.
 
     private GroundState groundState = GroundState.None;
@@ -42,13 +42,16 @@ public class LandingManager : MonoBehaviour
     {
         // Get the current landing point from the GameManager
         gameManager = GameManager.Instance;
-        currentLandingPoint = gameManager.CurrentPoint;
+        gameManager.GetCurrentMoon(OnCurrentMoonGet);
+
+        // Subscribe to the event for when the current moon is set
+        gameManager.OnNewMoon += OnCurrentMoonGet;
     }
 
     private void Update()
     {
         // Check if the ship is at the landing range
-        if (IsAtLandingRange())
+        if (IsAtLandingRange() && currentLandingPoint != null)
         {
             // If both legs are grounded, start the landing timer
             if (groundState == GroundState.Both)
@@ -56,13 +59,13 @@ public class LandingManager : MonoBehaviour
                 timerToLand += Time.deltaTime;
                 totalLandTime += Time.deltaTime;
 
-                Debug.Log($"Landing Timer: {timerToLand}, Total Land Time: {totalLandTime}");
                 // If the timer reaches the time to land, consider the ship landed
-                if (timerToLand >= timeToLand)
+                if (timerToLand >= TimeToLand)
                 {
                     // Reset the timer and notify the GameManager about the landing
-                    timerToLand = 0.0f;
+                    currentLandingPoint = null; // Reset the landing point after landing
                     gameManager.Landed(new GameManager.LandingData());
+                    timerToLand = 0.0f;
                     totalLandTime = 0.0f; // Reset total land time after handling landing
                 }
             }
@@ -86,11 +89,17 @@ public class LandingManager : MonoBehaviour
     }
 
     // ___ PRIVATE METHODS ___
+    private void OnCurrentMoonGet(Moon m)
+    {
+        currentLandingPoint = m.LandingPoint;
+    }
+
     private bool IsAtLandingRange()
     {
         if (currentLandingPoint == null)
             return false;
-        float distanceToLandingPoint = Vector3.Distance(transform.position, currentLandingPoint.position);
+        float distanceToLandingPoint = Vector2.Distance(transform.position, currentLandingPoint.position);
+        Debug.Log($"Distance to landing point: {distanceToLandingPoint}, Landing range: {landingRange}");
         return distanceToLandingPoint <= landingRange;
     }
 
@@ -120,4 +129,13 @@ public class LandingManager : MonoBehaviour
 
     }
 
+
+    private void OnDestroy()
+    {
+        // Unsubscribe from the event to prevent memory leaks
+        if (gameManager != null)
+        {
+            gameManager.OnNewMoon -= OnCurrentMoonGet;
+        }
+    }
 }

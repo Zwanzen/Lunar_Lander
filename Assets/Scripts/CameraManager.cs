@@ -8,6 +8,9 @@ public class CameraManager : MonoBehaviour
     [SerializeField] private Transform cameraTransform;
     [SerializeField] private CinemachineTargetGroup targetGroup;
 
+    // ___ PRIVATE ___
+
+    private GameManager gameManager;
     private Moon moon;
     private Vector3 targetDirection;
 
@@ -37,20 +40,35 @@ public class CameraManager : MonoBehaviour
 
     private void Start()
     {
-        // Get the initial starting Moon
-        moon = GameManager.Instance.CurrentMoon;
+        // Try and get the current moon from the GameManager
+        gameManager = GameManager.Instance;
+        gameManager.GetCurrentMoon(OnSetCurrentMoon);
 
-        targetDirection = (moon.LandingPoint.position - moon.Position).normalized;
-
-        // Rotate camera's up vector to match the target direction
-        cameraTransform.up = targetDirection;
-        SetTargetGroup(moon.LandingPoint, moon.MoonTransform);
-
+        // Subscribe to the event for when the current moon is set
+        gameManager.OnNewMoon += OnNewMoon;
     }
 
     private void Update()
     {
         HandleRotation();
+    }
+
+    // _____ PRIVATE METHODS ___
+    private void OnSetCurrentMoon(Moon m)
+    {
+        moon = m;
+        targetDirection = (moon.LandingPoint.position - moon.Position).normalized;
+
+        // Rotate camera's up vector to match the target direction
+        cameraTransform.up = targetDirection;
+        SetTargetGroup(moon.LandingPoint, moon.MoonTransform);
+    }
+
+    private void OnNewMoon(Moon m)
+    {
+        moon = m;
+        targetDirection = (moon.LandingPoint.position - moon.Position).normalized;
+        SetTargetGroup(moon.LandingPoint, moon.MoonTransform);
     }
 
     private void HandleRotation()
@@ -171,5 +189,15 @@ public class CameraManager : MonoBehaviour
     {
         targetGroup.Targets[1].Object = _moon;
         targetGroup.Targets[2].Object = _target;
+    }
+
+
+    private void OnDestroy()
+    {
+        // Unsubscribe from the event to prevent memory leaks
+        if (gameManager != null)
+        {
+            gameManager.OnNewMoon -= OnSetCurrentMoon;
+        }
     }
 }
