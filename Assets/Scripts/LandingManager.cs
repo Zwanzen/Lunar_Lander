@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI;
 
 /// <summary>
 /// Manages the landing and the quality of the landing.
@@ -7,6 +8,8 @@ using UnityEngine;
 public class LandingManager : MonoBehaviour
 {
     // ___ PRIVATE FIELDS ___
+    [Header("Landing Settings")]
+    [SerializeField] private Slider landingSlider;
     [SerializeField] private Transform leftFoot;
     [SerializeField] private Transform rightFoot;
     [SerializeField] private LayerMask groundLayerMask = 1 << 3;
@@ -14,10 +17,12 @@ public class LandingManager : MonoBehaviour
 
     // ___ PRIVATE VARIABLES ___
     private GameManager gameManager;
+    private Rigidbody rb;
 
     private Transform currentLandingPoint = null;
     private float landingRange = 7f;
     private const float TimeToLand = 1.0f;
+    private const float MaxVelocityToLand = 0.5f; // Maximum velocity to be considered landed
     private float timerToLand = 0.0f; // When this reaches timeToLand, the ship is considered landed.
 
     private GroundState groundState = GroundState.None;
@@ -38,6 +43,11 @@ public class LandingManager : MonoBehaviour
     }
 
     // ___ UNITY METHODS ___
+    private void Awake()
+    {
+        rb = GetComponent<Rigidbody>();
+    }
+
     private void Start()
     {
         // Get the current landing point from the GameManager
@@ -50,11 +60,23 @@ public class LandingManager : MonoBehaviour
 
     private void Update()
     {
+        HandleLanding();
+        HandleLandingSlider();
+    }
+
+    private void FixedUpdate()
+    {
+        UpdateGroundedState();
+    }
+
+    // ___ PRIVATE METHODS ___
+    private void HandleLanding()
+    {
         // Check if the ship is at the landing range
         if (IsAtLandingRange() && currentLandingPoint != null)
         {
             // If both legs are grounded, start the landing timer
-            if (groundState == GroundState.Both)
+            if (groundState == GroundState.Both && rb.linearVelocity.magnitude <= MaxVelocityToLand)
             {
                 timerToLand += Time.deltaTime;
                 totalLandTime += Time.deltaTime;
@@ -69,26 +91,61 @@ public class LandingManager : MonoBehaviour
                     totalLandTime = 0.0f; // Reset total land time after handling landing
                 }
             }
-            else
+            else if (groundState == GroundState.Single)
             {
                 // Reset the timer if not both legs are grounded
-                timerToLand = 0.0f;
+                if (timerToLand >= 0f)
+                {
+                    timerToLand -= Time.deltaTime * 5f; // Decrease the timer faster if not grounded
+                    if (timerToLand < 0.01f)
+                    {
+                        timerToLand = 0.01f; // Ensure timer does not go to zero for slider reasons
+                    }
+                }
+            }
+            else
+            {
+                if (timerToLand > 0f)
+                {
+                    timerToLand -= Time.deltaTime * 5f; // Decrease the timer faster if not grounded
+                    if (timerToLand < 0f)
+                    {
+                        timerToLand = 0f; // Ensure timer does not go negative
+                    }
+                }
             }
         }
         else
         {
-            // Reset the timer if not at landing range
-            timerToLand = 0.0f;
-            totalLandTime = 0.0f; // Reset total land time if not at landing range
+            if (timerToLand > 0f)
+            {
+                timerToLand -= Time.deltaTime * 5f; // Decrease the timer faster if not grounded
+            }
+            // Ensure timer does not go negative
+            if (timerToLand < 0f)
+            {
+                timerToLand = 0f; 
+            }
+            totalLandTime = 0f; // Reset total land time if not at landing range
         }
     }
 
-    private void FixedUpdate()
+    private void HandleLandingSlider()
     {
-        UpdateGroundedState();
+        // When timerToLand is greater than 0, we are in the process of landing.
+        if (timerToLand > 0f)
+        {
+            landingSlider.gameObject.SetActive(true);
+            // Calculate the normalized value for the slider
+            float normalizedValue = Mathf.Clamp01(timerToLand / TimeToLand);
+            landingSlider.value = normalizedValue;
+        }
+        else
+        {
+            landingSlider.gameObject.SetActive(false);
+        }
     }
 
-    // ___ PRIVATE METHODS ___
     private void OnCurrentMoonGet(Moon m)
     {
         currentLandingPoint = m.LandingPoint;
@@ -99,7 +156,6 @@ public class LandingManager : MonoBehaviour
         if (currentLandingPoint == null)
             return false;
         float distanceToLandingPoint = Vector2.Distance(transform.position, currentLandingPoint.position);
-        Debug.Log($"Distance to landing point: {distanceToLandingPoint}, Landing range: {landingRange}");
         return distanceToLandingPoint <= landingRange;
     }
 
