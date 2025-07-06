@@ -8,12 +8,8 @@ public class CameraManager : MonoBehaviour
     [SerializeField] private Transform cameraTransform;
     [SerializeField] private CinemachineTargetGroup targetGroup;
 
-    [SerializeField] private Moon moon;
-
-    [SerializeField] private Moon moon2;
-
+    private Moon moon;
     private Vector3 targetDirection;
-    private bool isOne = true;
 
     // Rotation effect types
     public enum RotationEffectType
@@ -39,42 +35,17 @@ public class CameraManager : MonoBehaviour
     private Vector3 startDirection;
     private bool isRotating = false;
 
-    private void Awake()
-    {
-
-    }
-
     private void Start()
     {
+        // Get the initial starting Moon
+        moon = GameManager.Instance.CurrentMoon;
+
         targetDirection = (moon.LandingPoint.position - moon.Position).normalized;
 
         // Rotate camera's up vector to match the target direction
         cameraTransform.up = targetDirection;
         SetTargetGroup(moon.LandingPoint, moon.MoonTransform);
 
-        // Subscribe to the input action for toggling targets
-        InputManager.Instance.FocusTarget += OnToggleTarget;
-    }
-
-    private void OnToggleTarget()
-    {
-        if (isOne)
-        {
-            targetDirection = (moon2.LandingPoint.position - moon2.Position).normalized;
-            SetTargetGroup(moon2.LandingPoint, moon2.MoonTransform);
-            isOne = false;
-        }
-        else
-        {
-            targetDirection = (moon.LandingPoint.position - moon.Position).normalized;
-            SetTargetGroup(moon.LandingPoint, moon.MoonTransform);
-            isOne = true;
-        }
-
-        // Reset rotation state when target changes
-        startDirection = cameraTransform.up;
-        rotationProgress = 0f;
-        isRotating = true;
     }
 
     private void Update()
