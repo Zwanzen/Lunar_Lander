@@ -1,3 +1,4 @@
+using FMODUnity;
 using MoreMountains.Feedbacks;
 using System;
 using UnityEngine;
@@ -19,6 +20,11 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private int pathResolution = 100;
     [SerializeField] private float tickRate = 0.1f; 
     [SerializeField] private LayerMask pathObstructionMask;
+    [Space(10)]
+    [Header("Thrust Sound")]
+    [SerializeField] private AnimationCurve thrustSoundCurve;
+    [SerializeField] private StudioEventEmitter thrustSoundEmitter;
+    [SerializeField] private float velSpeed = 1f; // Speed at which the sound parameter changes
 
 
     // ___ PRIVATE ___
@@ -30,11 +36,15 @@ public class PlayerController : MonoBehaviour
     private RaycastHit _raycastHitValue;
     private RaycastHit? _raycastHit;
     
-    private bool startedBoosting = false;
+    private bool startedThruster = false;
+    private float thrusterVel = 0f; // Used to update the parameter in FMOD
 
 
     // ___ Singelton ___
     public static PlayerController Instance { get; private set; }
+
+    // ___ Properties ___
+    public Transform Transform => transform;
 
     // ___ Unity Methods ___
     private void Awake()
@@ -60,10 +70,13 @@ public class PlayerController : MonoBehaviour
     {
         pathRenderer = GetComponent<LineRenderer>();
         physicsManager = PhysicsManager.Instance;
+        thrustSoundEmitter.Play();
     }
 
-    // ___ Properties ___
-    public Transform Transform => transform;
+    private void Update()
+    {
+        HandleSoundEmitterParam();
+    }
 
     private void FixedUpdate()
     {
@@ -90,20 +103,25 @@ public class PlayerController : MonoBehaviour
         {
             var particleAmount = (int)(200 * Time.fixedDeltaTime);
             thrusterParticles.Emit(particleAmount);
-            if (!startedBoosting)
-            {
-                thrusterFeedback.PlayFeedbacks();
-                startedBoosting = true;
-            }
         }
+    }
+
+    private void HandleSoundEmitterParam()
+    {
+        var change = Time.deltaTime * velSpeed;
+
+        // If we are inputting thrust, we start increasing the thruster velocity
+        if (InputManager.Instance.MoveInput.y > 0)
+            thrusterVel += change;
+
         else
-        {
-            if (startedBoosting)
-            {
-                thrusterFeedback.StopFeedbacks();
-                startedBoosting = false;
-            }
-        }
+            thrusterVel -= change;
+
+        // Clamp between 0 and 1
+        thrusterVel = Mathf.Clamp(thrusterVel, 0f, 1f);
+        // Update the FMOD parameter
+        thrustSoundEmitter.SetParameter("Thrust", thrusterVel);
+
     }
 
     private struct SimObject
