@@ -1,3 +1,4 @@
+using MoreMountains.Feedbacks;
 using System;
 using UnityEngine;
 
@@ -5,9 +6,10 @@ public class PlayerController : MonoBehaviour
 {
 
     // ___ Private Fields ___
-    [Header("Components")]
+    [Header("Refrences")]
     [SerializeField] private Rigidbody rb;
     [SerializeField] private ParticleSystem thrusterParticles;
+    [SerializeField] private MMF_Player thrusterFeedback;
     [Space(10)]
     [Header("Move Settings")]
     [SerializeField] private float force = 10f;
@@ -27,6 +29,8 @@ public class PlayerController : MonoBehaviour
     private Vector3[] _pathPoints;
     private RaycastHit _raycastHitValue;
     private RaycastHit? _raycastHit;
+    
+    private bool startedBoosting = false;
 
 
     // ___ Singelton ___
@@ -86,6 +90,19 @@ public class PlayerController : MonoBehaviour
         {
             var particleAmount = (int)(200 * Time.fixedDeltaTime);
             thrusterParticles.Emit(particleAmount);
+            if (!startedBoosting)
+            {
+                thrusterFeedback.PlayFeedbacks();
+                startedBoosting = true;
+            }
+        }
+        else
+        {
+            if (startedBoosting)
+            {
+                thrusterFeedback.StopFeedbacks();
+                startedBoosting = false;
+            }
         }
     }
 
