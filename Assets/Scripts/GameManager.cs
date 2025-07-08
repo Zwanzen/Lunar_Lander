@@ -56,6 +56,8 @@ public class GameManager : MonoBehaviour
         if (moons.Length > 0)
         {
             CurrentMoon = moons[currentLandingPointIndex];
+            // Activate the visuals for the first moon's landing point
+            CurrentMoon.LandingPoint.SetVisualsState(true);
         }
     }
 
@@ -87,6 +89,12 @@ public class GameManager : MonoBehaviour
     }
 
     // ___ PRIVATE METHODS ___
+    private IEnumerator DelayNextMoon ()
+    {
+        yield return new WaitForSeconds(2.0f); 
+        SetNextMoon(); 
+    }
+
     private void SetNextMoon()
     {
         // Increment the index
@@ -102,7 +110,8 @@ public class GameManager : MonoBehaviour
         CurrentMoon = moons[currentLandingPointIndex];
         // Invoke the event to notify subscribers about the new moon
         OnNewMoon?.Invoke(CurrentMoon);
-
+        // Set the visuals for the new moon's landing point
+        CurrentMoon.LandingPoint.SetVisualsState(true);
         // Debug the past and new moon
         Debug.Log($"New Moon Set: {CurrentMoon.gameObject.name} (Index: {currentLandingPointIndex})");
     }
@@ -163,7 +172,12 @@ public class GameManager : MonoBehaviour
     /// </summary>
     public void Landed(LandingData data)
     {
-        SetNextMoon();
+        // Activate the landing point visuals
+        CurrentMoon.LandingPoint.SetVisualsState(false);
+        // Play the flag feedback
+        CurrentMoon.LandingPoint.PlayFlagFeedback();
+        // Wait 2 seconds before setting the next moon
+        StartCoroutine(DelayNextMoon());
     }
 
     public void MissionFail()

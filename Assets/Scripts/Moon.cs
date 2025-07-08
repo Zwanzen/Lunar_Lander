@@ -1,4 +1,5 @@
 using Unity.Cinemachine;
+using UnityEditor;
 using UnityEngine;
 
 /// <summary>
@@ -35,8 +36,8 @@ public class Moon : MonoBehaviour
     // ___ PROPERTIES ___
     public Transform MoonTransform => moonTransform;
     public Vector3 Position => moonTransform.position;
-    public Transform LandingPoint { get; private set; }
-
+    public Transform LandingPointTransform { get; private set; }
+    public LandingPoint LandingPoint { get; private set; }
     // ___ UNITY METHODS ___
     private void OnValidate()
     {
@@ -52,7 +53,7 @@ public class Moon : MonoBehaviour
                 PhysicsManager.Instance.ClearGravitySources();
             }
             Destroy(moonTransform?.gameObject); // Destroy the old moon transform
-            Destroy(LandingPoint?.gameObject); // Destroy the old landing point transform
+            Destroy(LandingPointTransform?.gameObject); // Destroy the old landing point transform
         }
 
         // Make sure the angle is not above 360 degrees or below 0 degrees.
@@ -78,7 +79,8 @@ public class Moon : MonoBehaviour
         // Get landing point transform from the second child if it exists.
         if (transform.childCount > 1)
         {
-            LandingPoint = transform.GetChild(1);
+            LandingPointTransform = transform.GetChild(1);
+            LandingPoint = LandingPointTransform.GetComponent<LandingPoint>();
         }
         else
         {
@@ -91,7 +93,7 @@ public class Moon : MonoBehaviour
         ValidateMoonTransform();
         ManageLandingPoint();
         RegisterGravitySource();
-        GenerateDottedRadius();
+        //GenerateDottedRadius();
     }
 
     // ___ PRIVATE METHODS ___
@@ -146,7 +148,7 @@ public class Moon : MonoBehaviour
         // Ensure this has a child transform as the landing point transform at child index 1.
         if (transform.childCount > 1)
         {
-            LandingPoint = transform.GetChild(1);
+            LandingPointTransform = transform.GetChild(1);
         }
         else
         {
@@ -162,12 +164,23 @@ public class Moon : MonoBehaviour
                     return;
                 }
             }
-            // If no child exists, instantiate a new landing point prefab and set it as the second child.
-            LandingPoint = Instantiate(landingPointPrefab, transform.position, landingPointPrefab.transform.rotation, transform).transform;
+            // This will only work in the Unity Editor.
+            // For a built game, you must use Object.Instantiate.
+#if UNITY_EDITOR
+            // Instantiate the prefab as a linked instance.
+            GameObject spawnedObject = (GameObject)PrefabUtility.InstantiatePrefab(landingPointPrefab, transform);
+            LandingPointTransform = spawnedObject.transform;
+            // Set position and rotation after instantiation.
+            LandingPointTransform.position = transform.position;
+            LandingPointTransform.rotation = landingPointPrefab.transform.rotation;
+#else
+                // Fallback for the actual game build.
+                LandingPointTransform = Instantiate(landingPointPrefab, transform.position, landingPointPrefab.transform.rotation, transform).transform;
+#endif
             // Rename the instantiated landing point transform.
-            LandingPoint.name = "LandingPointTransform";
+            LandingPointTransform.name = "LandingPointTransform";
             // Make sure it is child index 1.
-            LandingPoint.SetSiblingIndex(1);
+            LandingPointTransform.SetSiblingIndex(1);
         }
 
         // Calculate the ray direction based on the landing point angle.
@@ -196,9 +209,12 @@ public class Moon : MonoBehaviour
             if (hit.collider != null && hit.collider.transform == moonTransform)
             {
                 // Set the landing point position to the hit point.
-                LandingPoint.position = hit.point;
-                // Set the landing point rotation to face upwards.
-                LandingPoint.rotation = Quaternion.LookRotation(hit.normal, Vector3.up);
+                LandingPointTransform.position = hit.point;
+                // Get the right hit normal direction
+                var newNormal = hit.normal;
+                newNormal.z = 0f; // Ensure the normal is in the XY plane
+                // Set the landing point up rotation to the angle direction.
+                LandingPointTransform.rotation = Quaternion.LookRotation(Vector3.forward, newNormal);
                 return;
             }
         }

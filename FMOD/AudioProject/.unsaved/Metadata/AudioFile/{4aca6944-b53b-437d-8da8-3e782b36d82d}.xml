@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objects serializationModel="Studio.02.02.00">
+	<object class="AudioFile" id="{4aca6944-b53b-437d-8da8-3e782b36d82d}">
+		<property name="assetPath">
+			<value>retro_impact_colorful_08.wav</value>
+		</property>
+		<property name="frequencyInKHz">
+			<value>44.0999985</value>
+		</property>
+		<property name="channelCount">
+			<value>1</value>
+		</property>
+		<property name="length">
+			<value>0.20800453514739228</value>
+		</property>
+		<relationship name="masterAssetFolder">
+			<destination>{9ce77260-071d-479d-a805-cae7043b00fd}</destination>
+		</relationship>
+	</object>
+</objects>

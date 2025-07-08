@@ -69,18 +69,18 @@ public class CameraManager : MonoBehaviour
     private void OnSetCurrentMoon(Moon m)
     {
         moon = m;
-        targetDirection = (moon.LandingPoint.position - moon.Position).normalized;
+        targetDirection = (moon.LandingPointTransform.position - moon.Position).normalized;
 
         // Rotate camera's up vector to match the target direction
         cameraTransform.up = targetDirection;
-        SetTargetGroup(moon.LandingPoint, moon.MoonTransform);
+        SetTargetGroup(moon.LandingPointTransform, moon.MoonTransform);
     }
 
     private void OnNewMoon(Moon m)
     {
         moon = m;
-        targetDirection = (moon.LandingPoint.position - moon.Position).normalized;
-        SetTargetGroup(moon.LandingPoint, moon.MoonTransform);
+        targetDirection = (moon.LandingPointTransform.position - moon.Position).normalized;
+        SetTargetGroup(moon.LandingPointTransform, moon.MoonTransform);
     }
 
     private void HandleRotation()

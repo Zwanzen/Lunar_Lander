@@ -1,4 +1,5 @@
 using FMODUnity;
+using MoreMountains.Feedbacks;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -15,10 +16,16 @@ public class LandingManager : MonoBehaviour
     [SerializeField] private Transform rightFoot;
     [SerializeField] private LayerMask groundLayerMask = 1 << 3;
     [SerializeField] private float footRadius = 0.1f;
+    [SerializeField] private StudioEventEmitter chargeSoundEmitter;
+    [SerializeField] private EventReference chargeSuccessfulSound;
+    [SerializeField] private MMF_Player sliderStartFeedback;
+    [SerializeField] private MMF_Player sliderStopFeedback;
+    [SerializeField] private MMF_Player chargingFeedback;
     [Space(10)]
     [Header("Crash Settings")]
     [SerializeField] private float crashVelocityThreshold = 5f;
     [SerializeField] private EventReference crashSoundEvent;
+    [SerializeField] private EventReference collisionSoundEvent;
 
     // ___ PRIVATE VARIABLES ___
     private GameManager gameManager;
@@ -29,6 +36,7 @@ public class LandingManager : MonoBehaviour
     private const float TimeToLand = 1.0f;
     private const float MaxVelocityToLand = 0.5f; // Maximum velocity to be considered landed
     private float timerToLand = 0.0f; // When this reaches timeToLand, the ship is considered landed.
+    private bool startedLanding = false;
 
     private GroundState groundState = GroundState.None;
     private bool isLeftLegGrounded = false;
@@ -74,6 +82,7 @@ public class LandingManager : MonoBehaviour
     {
         HandleLanding();
         HandleLandingSlider();
+        HandleLandingSound();
     }
 
     private void FixedUpdate()
@@ -94,6 +103,11 @@ public class LandingManager : MonoBehaviour
             return;
         }
 
+        // If the collision is not a crash, and it the relative velocity is greater than 0.1f, we play the collision sound.
+        if (collision.relativeVelocity.magnitude > 0.4f)
+        {
+            RuntimeManager.PlayOneShot(collisionSoundEvent, transform.position);
+        }
 
         // If we did not crash, check if we are landing
         if (IsAtLandingRange() && currentLandingPoint != null)
@@ -108,62 +122,89 @@ public class LandingManager : MonoBehaviour
     // ___ PRIVATE METHODS ___
     private void HandleLanding()
     {
-        // Check if the ship is at the landing range
-        if (IsAtLandingRange() && currentLandingPoint != null)
+        // If the ship is already crashed, we do not handle landing anymore.
+        if (crashed)
         {
-            // If both legs are grounded, start the landing timer
-            if (groundState == GroundState.Both && rb.linearVelocity.magnitude <= MaxVelocityToLand)
-            {
-                timerToLand += Time.deltaTime;
-                totalLandTime += Time.deltaTime;
+            // Stop all active feedbacks
+            if (sliderStartFeedback.IsPlaying)
+                sliderStartFeedback.StopFeedbacks();
+            if (sliderStopFeedback.IsPlaying)
+                sliderStopFeedback.StopFeedbacks();
+            if (chargingFeedback.IsPlaying)
+                chargingFeedback.StopFeedbacks();
+            chargeSoundEmitter.Stop();
 
-                // If the timer reaches the time to land, consider the ship landed
-                if (timerToLand >= TimeToLand)
-                {
-                    // Reset the timer and notify the GameManager about the landing
-                    currentLandingPoint = null; // Reset the landing point after landing
-                    gameManager.Landed(new GameManager.LandingData());
-                    timerToLand = 0.0f;
-
-                    // Reset stored data
-                    totalLandTime = 0.0f;
-                    initialImpactVelocity = -1.0f;
-                }
-            }
-            else if (groundState == GroundState.Single)
-            {
-                // Reset the timer if not both legs are grounded
-                if (timerToLand >= 0f)
-                {
-                    timerToLand -= Time.deltaTime * 5f; // Decrease the timer faster if not grounded
-                    if (timerToLand < 0.01f)
-                    {
-                        timerToLand = 0.01f; // Ensure timer does not go to zero for slider reasons
-                    }
-                }
-            }
-            else
-            {
-                if (timerToLand > 0f)
-                {
-                    timerToLand -= Time.deltaTime * 5f; // Decrease the timer faster if not grounded
-                    if (timerToLand < 0f)
-                    {
-                        timerToLand = 0f; // Ensure timer does not go negative
-                    }
-                }
-            }
+            return;
         }
-        else
+        if (!startedLanding && timerToLand > 0f)
+        {
+            // Start the landing sound
+            chargeSoundEmitter.Play();
+            sliderStartFeedback?.PlayFeedbacks();
+            // Interupt the stop feedbacks if they are playing
+            sliderStopFeedback?.StopFeedbacks();
+            startedLanding = true;
+        }
+        else if (startedLanding && timerToLand <= 0f)
+        {
+            // Stop the landing sound
+            chargeSoundEmitter.Stop();
+            sliderStopFeedback?.PlayFeedbacks();
+            startedLanding = false;
+        }
+
+        // Returns if the ship is not currently landing
+        if (!IsAtLandingRange() || currentLandingPoint == null || groundState == GroundState.None)
         {
             if (timerToLand > 0f)
             {
-                timerToLand -= Time.deltaTime * 5f; // Decrease the timer faster if not grounded
+                timerToLand -= Time.deltaTime * 5f; 
             }
-            // Ensure timer does not go negative
             if (timerToLand < 0f)
             {
-                timerToLand = 0f; 
+                timerToLand = 0f;
+            }
+
+            if (chargingFeedback.IsPlaying)
+                chargingFeedback.StopFeedbacks();
+            return;
+        }
+
+        // If both legs are grounded, start the landing timer
+        if (groundState == GroundState.Both && rb.linearVelocity.magnitude <= MaxVelocityToLand)
+        {
+            timerToLand += Time.deltaTime;
+            totalLandTime += Time.deltaTime;
+            if(!chargingFeedback.IsPlaying)
+                chargingFeedback.PlayFeedbacks();
+
+            // If the timer reaches the time to land, consider the ship landed
+            if (timerToLand >= TimeToLand)
+            {
+                // Reset the timer and notify the GameManager about the landing
+                currentLandingPoint = null; // Reset the landing point after landing
+                gameManager.Landed(new GameManager.LandingData());
+                RuntimeManager.PlayOneShot(chargeSuccessfulSound, transform.position);
+                timerToLand = 0.0f;
+
+                // Reset stored data
+                totalLandTime = 0.0f;
+                initialImpactVelocity = -1.0f;
+            }
+        }
+        else if (groundState == GroundState.Single)
+        {
+            if (chargingFeedback.IsPlaying)
+                chargingFeedback.StopFeedbacks();
+
+            // Reset the timer if not both legs are grounded
+            if (timerToLand >= 0f)
+            {
+                timerToLand -= Time.deltaTime * 5f; // Decrease the timer faster if not grounded
+                if (timerToLand < 0.01f)
+                {
+                    timerToLand = 0.01f; // Ensure timer does not go to zero for slider reasons
+                }
             }
         }
     }
@@ -171,22 +212,28 @@ public class LandingManager : MonoBehaviour
     private void HandleLandingSlider()
     {
         // When timerToLand is greater than 0, we are in the process of landing.
-        if (timerToLand > 0f)
+        if (landingSlider.IsActive())
         {
-            landingSlider.gameObject.SetActive(true);
+            //landingSlider.gameObject.SetActive(true);
             // Calculate the normalized value for the slider
             float normalizedValue = Mathf.Clamp01(timerToLand / TimeToLand);
             landingSlider.value = normalizedValue;
         }
-        else
+    }
+
+    private void HandleLandingSound()
+    {
+        // If we are landing, we set the charge parameter to the timerToLand normalized value.
+        if (startedLanding)
         {
-            landingSlider.gameObject.SetActive(false);
+            float chargeValue = Mathf.Clamp01(timerToLand / TimeToLand);
+            chargeSoundEmitter.SetParameter("Charge", chargeValue);
         }
     }
 
     private void OnCurrentMoonGet(Moon m)
     {
-        currentLandingPoint = m.LandingPoint;
+        currentLandingPoint = m.LandingPointTransform;
     }
 
     private bool IsAtLandingRange()

@@ -24,6 +24,7 @@ public class PlayerController : MonoBehaviour
     [Header("Thrust Sound")]
     [SerializeField] private AnimationCurve thrustSoundCurve;
     [SerializeField] private StudioEventEmitter thrustSoundEmitter;
+    [SerializeField] private EventReference thrustStartSound;
     [SerializeField] private float velSpeed = 1f; // Speed at which the sound parameter changes
 
 
@@ -75,7 +76,7 @@ public class PlayerController : MonoBehaviour
 
     private void Update()
     {
-        HandleSoundEmitterParam();
+        HandleSound();
     }
 
     private void FixedUpdate()
@@ -106,8 +107,20 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    private void HandleSoundEmitterParam()
+    private void HandleSound()
     {
+        // Check if the player pressed the thrust button
+        if (InputManager.Instance.MoveInput.y > 0 && !startedThruster)
+        {
+            RuntimeManager.PlayOneShotAttached(thrustStartSound, gameObject);
+            startedThruster = true;
+        }
+        else if (InputManager.Instance.MoveInput.y <= 0 && startedThruster)
+        {
+
+            startedThruster = false;
+        }
+
         var change = Time.deltaTime * velSpeed;
 
         // If we are inputting thrust, we start increasing the thruster velocity
@@ -137,6 +150,8 @@ public class PlayerController : MonoBehaviour
     /// </summary>
     private void HandleShipPath()
     {
+        return; // Exit early if we hit an obstruction
+
         // Initialize simulation object with current ship data
         // Make sure _shipSimObject is initialized in Awake or Start
         _shipSimObject.Position = transform.position;

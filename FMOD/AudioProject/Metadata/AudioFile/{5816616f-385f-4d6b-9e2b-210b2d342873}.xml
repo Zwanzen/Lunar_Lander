@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objects serializationModel="Studio.02.02.00">
+	<object class="AudioFile" id="{5816616f-385f-4d6b-9e2b-210b2d342873}">
+		<property name="assetPath">
+			<value>retro_explosion_deep_07.wav</value>
+		</property>
+		<property name="frequencyInKHz">
+			<value>44.0999985</value>
+		</property>
+		<property name="channelCount">
+			<value>1</value>
+		</property>
+		<property name="length">
+			<value>1.0956462585034015</value>
+		</property>
+		<relationship name="masterAssetFolder">
+			<destination>{9ce77260-071d-479d-a805-cae7043b00fd}</destination>
+		</relationship>
+	</object>
+</objects>
