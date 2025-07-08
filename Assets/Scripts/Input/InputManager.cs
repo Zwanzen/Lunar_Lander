@@ -32,6 +32,7 @@ public class InputManager : MonoBehaviour
 
     // ___ Event Actions ___
     public Action FocusTarget;
+    public Action Pause;
 
     // ___ Initialize Inputs ___
     private void Start()
@@ -44,6 +45,8 @@ public class InputManager : MonoBehaviour
 
             // Subscribe to the FocusTarget action
             inputActions.Player.FocusTarget.performed += ctx => FocusTarget?.Invoke();
+            // Subscribe to the Pause action
+            inputActions.Player.Pause.performed += ctx => Pause?.Invoke();
 
             inputActions.Enable();
         }

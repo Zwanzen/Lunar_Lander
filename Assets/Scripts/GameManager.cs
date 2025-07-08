@@ -1,12 +1,24 @@
+using MoreMountains.Feedbacks;
 using System;
 using System.Collections;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 public class GameManager : MonoBehaviour
 {
     // ___ PRIVATE FIELDS ___
     [Header("Game Settings")]
     [SerializeField] private Moon[] moons;
+    [Space(10)]
+    [Header("UI Settings")]
+    [SerializeField] private MMF_Player missionCompleteFeedback;
+    [Space(2)]
+    [SerializeField] private GameObject pauseMenuButton;
+    [SerializeField] private MMF_Player MissionPausedFeedback;
+    [SerializeField] private MMF_Player MissionContinueFeedback;
+    [Space(2)]
+    [SerializeField] private GameObject missionFailButton;
+    [SerializeField] private MMF_Player missionFailFeedback;
 
 
     // ___ PRIVATE ___
@@ -15,6 +27,7 @@ public class GameManager : MonoBehaviour
     public enum GameState
     {
         Playing,
+        Paused,
         MissionFail,
         MissionComplete
     }
@@ -59,13 +72,16 @@ public class GameManager : MonoBehaviour
             // Activate the visuals for the first moon's landing point
             CurrentMoon.LandingPoint.SetVisualsState(true);
         }
+
+        // Subscribe to the pause action
+        InputManager.Instance.Pause += PauseGame;
     }
 
     private void Update()
     {
-        if(currentGameState == GameState.Playing)
+        if(currentGameState == GameState.Playing || currentGameState == GameState.Paused)
         {
-            // Handle game logic here, e.g., checking for landing conditions, updating UI, etc.
+
         }
         else if(!stopped)
         {
@@ -89,6 +105,26 @@ public class GameManager : MonoBehaviour
     }
 
     // ___ PRIVATE METHODS ___
+    private void PauseGame()
+    {
+        // If the game is not playing, return immediately
+        if (currentGameState != GameState.Playing)
+            return;
+
+
+        // Set the game state to Paused
+        currentGameState = GameState.Paused;
+        // Stop the player
+        PlayerController.Instance.GameStopped();
+        // Stop the time
+        Time.timeScale = 0f;
+        // Play the mission paused feedback
+        MissionPausedFeedback?.PlayFeedbacks();
+        // Set the eventsystem to target pause menu button
+        EventSystem.current.SetSelectedGameObject(pauseMenuButton);
+
+    }
+
     private IEnumerator DelayNextMoon ()
     {
         yield return new WaitForSeconds(2.0f); 
@@ -103,7 +139,7 @@ public class GameManager : MonoBehaviour
         if (currentLandingPointIndex >= moons.Length)
         {
             Debug.LogWarning("No more moons available.");
-            MissionComplete(); // When the last moon has landed, the game is over.
+            MissionComplete(); // When the last moon has landed, the game is over
             return;
         }
         // Set the current moon to the next one in the array
@@ -118,7 +154,10 @@ public class GameManager : MonoBehaviour
 
     private void MissionComplete()
     {
-
+        // Set the game state to MissionComplete
+        currentGameState = GameState.MissionComplete;
+        // Stop the player
+        PlayerController.Instance.GameStopped();
     }
 
     private float ValidateLandingQuality(LandingData data)
@@ -185,9 +224,51 @@ public class GameManager : MonoBehaviour
         // When we crash, we want the game to slowly slow down. And when everything stops, we want to show a game over screen.
         // We set the game state to MissionFail, which will slow down the game.
         currentGameState = GameState.MissionFail;
+
+        StartCoroutine(DelayedMissionFail());
+    }
+
+    private IEnumerator DelayedMissionFail()
+    {
+        // Wait for a short duration before showing the mission fail feedback
+        yield return new WaitForSecondsRealtime(2.0f);
+        // Play the mission fail feedback
+        missionFailFeedback?.PlayFeedbacks();
+        // Stop the player from moving
+        PlayerController.Instance.GameStopped();
+        // Set the eventsystem to target mission fail button
+        EventSystem.current.SetSelectedGameObject(missionFailButton);
     }
 
     #region UI OPTIONS
+
+    public void ContinueMission()
+    {
+        // Set the game state to Playing
+        currentGameState = GameState.Playing;
+        // Resume the time
+        Time.timeScale = 1.0f;
+        // Resume the player
+        PlayerController.Instance.GameResumed();
+        // Play the mission continue feedback
+        MissionContinueFeedback?.PlayFeedbacks();
+    }
+
+    public void RestartMission()
+    {
+        // Temp Reload scene
+        UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
+        // Make sure to fix time scale
+        Time.timeScale = 1.0f;
+
+        // This should not be a problem... 
+        // But it is...
+
+        // Set the game state to Playing
+        currentGameState = GameState.Playing;
+        // Start the player
+        PlayerController.Instance.GameResumed();
+    }
 
     public void GoToMenu()
     {
@@ -201,4 +282,13 @@ public class GameManager : MonoBehaviour
         Time.timeScale = 1.0f;
     }
     #endregion
+
+    private void OnDestroy()
+    {
+        // Unsubscribe from the pause action
+        if (InputManager.Instance != null)
+        {
+            InputManager.Instance.Pause -= PauseGame;
+        }
+    }
 }

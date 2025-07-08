@@ -97,8 +97,8 @@ public class LandingManager : MonoBehaviour
         // First check if we crashed
         if (Crashed(collision))
         {
-            // Notify the GameManager about the crash
-            gameManager.MissionFail();
+            // Stop the player early
+            PlayerController.Instance.GameStopped();
             Crash();
             return;
         }
@@ -301,6 +301,9 @@ public class LandingManager : MonoBehaviour
 
         // Spawn Sound
         RuntimeManager.PlayOneShot(crashSoundEvent, transform.position);
+
+        // Notify the GameManager about the crash
+        gameManager.MissionFail();
     }
 
     private void TurnOffMainVisuals()

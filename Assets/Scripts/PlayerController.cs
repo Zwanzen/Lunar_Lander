@@ -11,10 +11,12 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private Rigidbody rb;
     [SerializeField] private ParticleSystem thrusterParticles;
     [SerializeField] private MMF_Player thrusterFeedback;
+    [SerializeField] private MeshRenderer fuelScreen;
     [Space(10)]
     [Header("Move Settings")]
     [SerializeField] private float force = 10f;
     [SerializeField] private float rotationSpeed = 10f;
+    [SerializeField] private float fuelConsumptionRate = 0.1f;
     [Space(10)]
     [Header("Path Render Settings")]
     [SerializeField] private int pathResolution = 100;
@@ -40,6 +42,8 @@ public class PlayerController : MonoBehaviour
     private bool startedThruster = false;
     private float thrusterVel = 0f; // Used to update the parameter in FMOD
 
+    private bool gameStopped = false;
+    private float fuel = 100f;
 
     // ___ Singelton ___
     public static PlayerController Instance { get; private set; }
@@ -76,16 +80,30 @@ public class PlayerController : MonoBehaviour
 
     private void Update()
     {
+        if (gameStopped)
+            return;
+
         HandleSound();
+        UpdateFuelMeter();
     }
 
     private void FixedUpdate()
     {
+        if(gameStopped)
+            return;
+
         HandleMovement();
         HandleShipPath();
     }
 
     // ___ Private Methods ___
+    private void UpdateFuelMeter()
+    {
+        // Ref numbers for fuel meter
+        // Min: 0.18f, max 0.54f
+        fuelScreen.material.SetFloat("_Fuel", Mathf.Lerp(0.18f, 0.54f, fuel / 100f));
+    }
+
     private void HandleMovement()
     {
         // Get main thrust force
@@ -104,6 +122,8 @@ public class PlayerController : MonoBehaviour
         {
             var particleAmount = (int)(200 * Time.fixedDeltaTime);
             thrusterParticles.Emit(particleAmount);
+            // Consume fuel
+            fuel -= fuelConsumptionRate * Time.fixedDeltaTime * particleAmount;
         }
     }
 
@@ -114,10 +134,11 @@ public class PlayerController : MonoBehaviour
         {
             RuntimeManager.PlayOneShotAttached(thrustStartSound, gameObject);
             startedThruster = true;
+            thrusterFeedback.PlayFeedbacks();
         }
         else if (InputManager.Instance.MoveInput.y <= 0 && startedThruster)
         {
-
+            thrusterFeedback.StopFeedbacks();
             startedThruster = false;
         }
 
@@ -125,8 +146,9 @@ public class PlayerController : MonoBehaviour
 
         // If we are inputting thrust, we start increasing the thruster velocity
         if (InputManager.Instance.MoveInput.y > 0)
+        {
             thrusterVel += change;
-
+        }
         else
             thrusterVel -= change;
 
@@ -276,5 +298,17 @@ public class PlayerController : MonoBehaviour
     private void OnDisable()
     {
         OnStop();
+    }
+
+    // ___ PUBLIC METHODS ___
+    public void GameStopped()
+    {
+        gameStopped = true;
+        thrustSoundEmitter.Stop(); // Stop sound emitter
+    }
+    public void GameResumed()
+    {
+        gameStopped = false;
+        thrustSoundEmitter.Play(); // Resume sound emitter
     }
 }

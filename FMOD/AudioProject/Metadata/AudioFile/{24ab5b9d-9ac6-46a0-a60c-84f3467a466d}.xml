@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <objects serializationModel="Studio.02.02.00">
-	<object class="AudioFile" id="{7dca0669-5317-45ae-ae31-957349244971}">
+	<object class="AudioFile" id="{24ab5b9d-9ac6-46a0-a60c-84f3467a466d}">
 		<property name="assetPath">
-			<value>retro_impact_hit_general_19.wav</value>
+			<value>retro_footstep_movement_02.wav</value>
 		</property>
 		<property name="frequencyInKHz">
 			<value>44.0999985</value>
@@ -11,7 +11,7 @@
 			<value>1</value>
 		</property>
 		<property name="length">
-			<value>0.29022675736961451</value>
+			<value>0.13723356009070295</value>
 		</property>
 		<relationship name="masterAssetFolder">
 			<destination>{9ce77260-071d-479d-a805-cae7043b00fd}</destination>

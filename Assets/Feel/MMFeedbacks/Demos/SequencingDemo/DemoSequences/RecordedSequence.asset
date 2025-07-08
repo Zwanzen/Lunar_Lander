@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d6480c3a11ef13143b71f9c64c7da64c, type: 3}
   m_Name: RecordedSequence
   m_EditorClassIdentifier: 
-  Length: 3
+  Length: 8
   OriginalSequence:
     Line:
     - Timestamp: 0
@@ -39,7 +39,7 @@ MonoBehaviour:
       ID: 0
     - Timestamp: 3.3151855
       ID: 0
-  EndSilenceDuration: 0.375
+  EndSilenceDuration: 1
   SequenceTracks:
   - ID: 0
     TrackColor: {r: 0.6784314, g: 1, b: 0.18431373, a: 1}
@@ -54,40 +54,40 @@ MonoBehaviour:
     State: 2
     Initialized: 1
   Quantized: 1
-  TargetBPM: 160
+  TargetBPM: 60
   QuantizedSequence:
   - Line:
     - Timestamp: 0
       ID: 0
-    - Timestamp: 0.375
+    - Timestamp: 1
       ID: -1
-    - Timestamp: 0.75
+    - Timestamp: 2
       ID: 0
-    - Timestamp: 1.125
+    - Timestamp: 3
       ID: -1
-    - Timestamp: 1.5
+    - Timestamp: 4
       ID: 0
-    - Timestamp: 1.875
+    - Timestamp: 5
       ID: 0
-    - Timestamp: 2.25
+    - Timestamp: 6
       ID: -1
-    - Timestamp: 2.625
+    - Timestamp: 7
       ID: 0
   - Line:
     - Timestamp: 0
       ID: -1
-    - Timestamp: 0.375
+    - Timestamp: 1
       ID: 1
-    - Timestamp: 0.75
+    - Timestamp: 2
       ID: -1
-    - Timestamp: 1.125
+    - Timestamp: 3
       ID: 1
-    - Timestamp: 1.5
+    - Timestamp: 4
       ID: 1
-    - Timestamp: 1.875
+    - Timestamp: 5
       ID: -1
-    - Timestamp: 2.25
+    - Timestamp: 6
       ID: 1
-    - Timestamp: 2.625
+    - Timestamp: 7
       ID: 1
   RandomizeTrackColorsButton: 0
