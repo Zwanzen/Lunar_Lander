@@ -121,7 +121,6 @@ public class PlayerController : MonoBehaviour
         thrusterVel = Mathf.Clamp(thrusterVel, 0f, 1f);
         // Update the FMOD parameter
         thrustSoundEmitter.SetParameter("Thrust", thrusterVel);
-
     }
 
     private struct SimObject
@@ -245,5 +244,22 @@ public class PlayerController : MonoBehaviour
         return false;
     }
 
+    private void OnStop()
+    {
+        // Stop the sound emitter when the player is destroyed
+        if (thrustSoundEmitter != null && thrustSoundEmitter.IsPlaying())
+        {
+            thrustSoundEmitter.Stop();
+        }
+    }
 
+    private void OnDestroy()
+    {
+        OnStop();
+    }
+
+    private void OnDisable()
+    {
+        OnStop();
+    }
 }

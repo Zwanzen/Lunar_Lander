@@ -8,8 +8,10 @@ public class CameraManager : MonoBehaviour
     [SerializeField] private Transform cameraTransform;
     [SerializeField] private CinemachineTargetGroup targetGroup;
 
-    // ___ PRIVATE ___
+    // ___ INSTANCE ___
+    public static CameraManager Instance { get; private set; }
 
+    // ___ PRIVATE ___
     private GameManager gameManager;
     private Moon moon;
     private Vector3 targetDirection;
@@ -37,6 +39,16 @@ public class CameraManager : MonoBehaviour
     private float rotationProgress = 0f;
     private Vector3 startDirection;
     private bool isRotating = false;
+
+    private void Awake()
+    {
+        // Ensure that there is only one instance of CameraManager
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+        }
+        Instance = this;
+    }
 
     private void Start()
     {
@@ -109,80 +121,13 @@ public class CameraManager : MonoBehaviour
         // Clamp t between 0 and 1
         t = Mathf.Clamp01(t);
 
-        switch (rotationEffectType)
-        {
-            case RotationEffectType.EaseInOut:
-                return EaseInOut(t);
-
-            case RotationEffectType.Elastic:
-                return ElasticEaseOut(t);
-
-            case RotationEffectType.Bounce:
-                return BounceEaseOut(t);
-
-            case RotationEffectType.Linear:
-            default:
-                return t;
-        }
-    }
-
-    private float EaseInOut(float t)
-    {
-        // Smoothstep implementation with adjustable power
-        float tSquared = t * t;
-        float easedT = tSquared / (2.0f * (tSquared - t) + 1.0f);
-
-        // Apply easing power to adjust the curve
-        return Mathf.Lerp(t, easedT, easingPower);
-    }
-
-    private float ElasticEaseOut(float t)
-    {
-        if (t == 0 || t == 1)
-            return t;
-
-        float p = elasticPeriod;
-        float a = elasticAmplitude;
-        float s;
-
-        if (a < 1)
-        {
-            a = 1;
-            s = p / 4;
-        }
-        else
-        {
-            s = p / (2 * Mathf.PI) * Mathf.Asin(1 / a);
-        }
-
-        return a * Mathf.Pow(2, -10 * t) * Mathf.Sin((t - s) * (2 * Mathf.PI) / p) + 1;
+        return BounceEaseOut(t);
     }
 
     private float BounceEaseOut(float t)
     {
         float bounce = bounceAmplitude;
         return bounce * (7.5625f * t * t);
-        /*
-    if (t < 1 / 2.75f)
-    {
-    }
-
-    else if (t < 2 / 2.75f)
-    {
-        t -= 1.5f / 2.75f;
-        return bounce * (7.5625f * t * t + 0.75f);
-    }
-    else if (t < 2.5 / 2.75)
-    {
-        t -= 2.25f / 2.75f;
-        return bounce * (7.5625f * t * t + 0.9375f);
-    }
-    else
-    {
-        t -= 2.625f / 2.75f;
-        return bounce * (7.5625f * t * t + 0.984375f);
-    }
-    */
     }
 
     private void SetTargetGroup(Transform _target, Transform _moon)
@@ -191,6 +136,17 @@ public class CameraManager : MonoBehaviour
         targetGroup.Targets[2].Object = _target;
     }
 
+    // ___ PUBLIC METHODS ___
+    public void Crashed(Rigidbody[] fracturedPieces)
+    {
+        // Remove all targets from the target group
+        targetGroup.Targets.RemoveRange(0, targetGroup.Targets.Count);
+        // Add fractured pieces as targets
+        foreach (Rigidbody piece in fracturedPieces)
+        {
+            targetGroup.AddMember(piece.transform, 1.0f, 0.0f);
+        }
+    }
 
     private void OnDestroy()
     {

@@ -12,6 +12,17 @@ public class GameManager : MonoBehaviour
     // ___ PRIVATE ___
     private int currentLandingPointIndex = 0;
 
+    public enum GameState
+    {
+        Playing,
+        MissionFail,
+        MissionComplete
+    }
+    private GameState currentGameState = GameState.Playing;
+    private float slowDownSpeed = 1.0f;
+    private float slowDownTimer = 0.0f;
+    private bool stopped = false;
+
     // ___ EVENTS / DELEGATES ___
     public delegate void OnMoonSetDelegate(Moon m);
     public Action<Moon> OnNewMoon;
@@ -46,6 +57,33 @@ public class GameManager : MonoBehaviour
         {
             CurrentMoon = moons[currentLandingPointIndex];
         }
+    }
+
+    private void Update()
+    {
+        if(currentGameState == GameState.Playing)
+        {
+            // Handle game logic here, e.g., checking for landing conditions, updating UI, etc.
+        }
+        else if(!stopped)
+        {
+            slowDownTimer += Time.deltaTime * slowDownSpeed;
+            // Slow down the game if the game state is not playing
+            Time.timeScale = Mathf.Lerp(1f, 0f, slowDownTimer);
+            // Increase the fixed time step to get smoother slow down
+            Time.fixedDeltaTime = Mathf.Lerp(0.02f, 0.002f, slowDownTimer);
+
+            if(slowDownTimer >= 1.0f)
+            {
+                stopped = true;
+                // Make sure the time scale is set to 0 when the game is stopped
+                Time.timeScale = 0f;
+                Time.fixedDeltaTime = 0.02f; // Reset fixed delta time to normal
+
+                // Call in the menu
+            }
+        }
+
     }
 
     // ___ PRIVATE METHODS ___
@@ -130,7 +168,23 @@ public class GameManager : MonoBehaviour
 
     public void MissionFail()
     {
-
+        // When we crash, we want the game to slowly slow down. And when everything stops, we want to show a game over screen.
+        // We set the game state to MissionFail, which will slow down the game.
+        currentGameState = GameState.MissionFail;
     }
 
+    #region UI OPTIONS
+
+    public void GoToMenu()
+    {
+        // Remember to set the time scale back to 1.0f when going back to the menu.
+        Time.timeScale = 1.0f;
+    }
+
+    public void GoNextLevel()
+    {
+        // Remeber to set the time scale back to 1.0f when going to the next level.
+        Time.timeScale = 1.0f;
+    }
+    #endregion
 }
