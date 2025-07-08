@@ -45,6 +45,9 @@ public class PlayerController : MonoBehaviour
     private bool gameStopped = false;
     private float fuel = 100f;
 
+    private const float MaxTimeWithoutFuel = 5f;
+    private float timeWithoutFuel = 0f;
+
     // ___ Singelton ___
     public static PlayerController Instance { get; private set; }
 
@@ -85,6 +88,7 @@ public class PlayerController : MonoBehaviour
 
         HandleSound();
         UpdateFuelMeter();
+        HandleOutOfFuel();
     }
 
     private void FixedUpdate()
@@ -97,6 +101,26 @@ public class PlayerController : MonoBehaviour
     }
 
     // ___ Private Methods ___
+    private void HandleOutOfFuel()
+    {
+        if (fuel <= 0f)
+        {
+            fuel = 0f; 
+            timeWithoutFuel += Time.deltaTime;
+            // If we have been without fuel for too long, we stop the ship
+            if (timeWithoutFuel >= MaxTimeWithoutFuel && !gameStopped)
+            {
+                gameStopped = true;
+                GameManager.Instance.MissionFail();
+                return; 
+            }
+        }
+        else
+        {
+            timeWithoutFuel = 0f; // Reset timer if we have fuel
+        }
+    }
+
     private void UpdateFuelMeter()
     {
         // Ref numbers for fuel meter
@@ -106,6 +130,13 @@ public class PlayerController : MonoBehaviour
 
     private void HandleMovement()
     {
+        // If we dont have any fuel, return early
+        if (fuel <= 0f)
+        {
+            fuel = 0f; // Clamp fuel to 0
+            return; // No fuel, no movement
+        }
+
         // Get main thrust force
         float thrust = InputManager.Instance.MoveInput.y * force;
 
@@ -123,12 +154,23 @@ public class PlayerController : MonoBehaviour
             var particleAmount = (int)(200 * Time.fixedDeltaTime);
             thrusterParticles.Emit(particleAmount);
             // Consume fuel
-            fuel -= fuelConsumptionRate * Time.fixedDeltaTime * particleAmount;
+            fuel -= fuelConsumptionRate * Time.fixedDeltaTime;
         }
     }
 
     private void HandleSound()
     {
+        // If we dont have any fuel, return early
+        if (fuel <= 0f)
+        {
+            // If sound is playing, stop it
+            if (thrustSoundEmitter != null && thrustSoundEmitter.IsPlaying())
+            {
+                thrustSoundEmitter.Stop();
+            }
+            return; 
+        }
+
         // Check if the player pressed the thrust button
         if (InputManager.Instance.MoveInput.y > 0 && !startedThruster)
         {

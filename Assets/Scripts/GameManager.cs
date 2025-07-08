@@ -248,6 +248,7 @@ public class GameManager : MonoBehaviour
         currentGameState = GameState.Playing;
         // Resume the time
         Time.timeScale = 1.0f;
+        Time.fixedDeltaTime = 0.02f; 
         // Resume the player
         PlayerController.Instance.GameResumed();
         // Play the mission continue feedback
@@ -260,6 +261,7 @@ public class GameManager : MonoBehaviour
         UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
         // Make sure to fix time scale
         Time.timeScale = 1.0f;
+        Time.fixedDeltaTime = 0.02f;
 
         // This should not be a problem... 
         // But it is...
@@ -274,12 +276,14 @@ public class GameManager : MonoBehaviour
     {
         // Remember to set the time scale back to 1.0f when going back to the menu.
         Time.timeScale = 1.0f;
+        Time.fixedDeltaTime = 0.02f;
     }
 
     public void GoNextLevel()
     {
         // Remeber to set the time scale back to 1.0f when going to the next level.
         Time.timeScale = 1.0f;
+        Time.fixedDeltaTime = 0.02f;
     }
     #endregion
 

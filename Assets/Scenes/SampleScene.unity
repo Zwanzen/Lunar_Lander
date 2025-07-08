@@ -12988,7 +12988,7 @@ PrefabInstance:
       objectReference: {fileID: 1758378133}
     - target: {fileID: 8055065854406545249, guid: 1c71ed6b9f09a3e489a2d4984e75ee1e, type: 3}
       propertyPath: fuelConsumptionRate
-      value: 1
+      value: 7
       objectReference: {fileID: 0}
     - target: {fileID: 8055065854406545249, guid: 1c71ed6b9f09a3e489a2d4984e75ee1e, type: 3}
       propertyPath: thrustStartSound.Path
