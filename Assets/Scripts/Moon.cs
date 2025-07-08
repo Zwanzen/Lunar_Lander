@@ -61,6 +61,7 @@ public class Moon : MonoBehaviour
         ValidateMoonTransform();
         ManageLandingPoint();
         RegisterGravitySource();
+        GenerateDottedRadius();
     }
 
     private void Awake()
@@ -90,6 +91,7 @@ public class Moon : MonoBehaviour
         ValidateMoonTransform();
         ManageLandingPoint();
         RegisterGravitySource();
+        GenerateDottedRadius();
     }
 
     // ___ PRIVATE METHODS ___
@@ -230,6 +232,40 @@ public class Moon : MonoBehaviour
             return;
         }
         PhysicsManager.Instance.RemoveGravitySource(moonTransform);
+    }
+
+    /// <summary>
+    /// Creates a line renderer that shows the radius of the moon with a dotted line.
+    /// </summary>
+    private void GenerateDottedRadius()
+    {
+        return;
+        LineRenderer lineRenderer = moonTransform.GetComponent<LineRenderer>();
+        if (lineRenderer == null)
+        {
+            lineRenderer = moonTransform.gameObject.AddComponent<LineRenderer>();
+        }
+        lineRenderer.positionCount = 100; // Number of points in the circle
+        lineRenderer.loop = true; // Make it a loop
+        lineRenderer.startWidth = 0.1f; // Width of the line
+        lineRenderer.endWidth = 0.1f; // Width of the line
+        lineRenderer.useWorldSpace = true; // Use world space for positions
+        lineRenderer.startWidth = 1f;
+        lineRenderer.endWidth = 1f;
+        lineRenderer.widthMultiplier = 3f;
+        float angleStep = 360f / lineRenderer.positionCount;
+        for (int i = 0; i < lineRenderer.positionCount; i++)
+        {
+            float angle = i * angleStep * Mathf.Deg2Rad;
+            Vector3 point = new Vector3(Mathf.Cos(angle), Mathf.Sin(angle), 0) * moonRange + moonTransform.position;
+            lineRenderer.SetPosition(i, point);
+        }
+
+        // Set the line renderer to be tileable and use DottedLine material from resources.
+        Material dottedMaterial = Resources.Load<Material>("DottedLine");
+        lineRenderer.material = dottedMaterial;
+        lineRenderer.textureMode = LineTextureMode.Tile;
+        lineRenderer.textureScale = new Vector2(0.27f, 0.06f); // Adjust texture scale as needed
     }
 
     private void OnDestroy()

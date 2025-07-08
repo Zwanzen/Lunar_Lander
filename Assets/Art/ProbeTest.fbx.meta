@@ -7,17 +7,12 @@ ModelImporter:
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
+      name: Glow
+    second: {fileID: 2100000, guid: c99b50eba31644546a1fb63a831254ec, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
       name: Main
-    second: {fileID: 2100000, guid: b070173bc4d36894b837134904f279db, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: Main.003
-    second: {fileID: 2100000, guid: b070173bc4d36894b837134904f279db, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: Main.004
     second: {fileID: 2100000, guid: b070173bc4d36894b837134904f279db, type: 2}
   materials:
     materialImportMode: 2

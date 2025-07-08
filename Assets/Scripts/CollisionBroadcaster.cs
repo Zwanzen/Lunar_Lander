@@ -15,6 +15,7 @@ public class CollisionBroadcaster : MonoBehaviour
     // ___ UNITY METHODS ___
     private void OnCollisionEnter(Collision collision)
     {
+        Debug.Log("Collision");
         OnCollisionEnterEvent?.Invoke(collision);
     }
     private void OnCollisionExit(Collision collision)
