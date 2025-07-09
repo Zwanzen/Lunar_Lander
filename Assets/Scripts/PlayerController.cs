@@ -43,7 +43,6 @@ public class PlayerController : MonoBehaviour
     private float thrusterVel = 0f; // Used to update the parameter in FMOD
 
     private bool gameStopped = false;
-    private float fuel = 100f;
 
     private const float MaxTimeWithoutFuel = 5f;
     private float timeWithoutFuel = 0f;
@@ -53,6 +52,7 @@ public class PlayerController : MonoBehaviour
 
     // ___ Properties ___
     public Transform Transform => transform;
+    public float Fuel { get; private set; } = 100f;
 
     // ___ Unity Methods ___
     private void Awake()
@@ -103,9 +103,9 @@ public class PlayerController : MonoBehaviour
     // ___ Private Methods ___
     private void HandleOutOfFuel()
     {
-        if (fuel <= 0f)
+        if (Fuel <= 0f)
         {
-            fuel = 0f; 
+            Fuel = 0f; 
             timeWithoutFuel += Time.deltaTime;
             // If we have been without fuel for too long, we stop the ship
             if (timeWithoutFuel >= MaxTimeWithoutFuel && !gameStopped)
@@ -125,15 +125,15 @@ public class PlayerController : MonoBehaviour
     {
         // Ref numbers for fuel meter
         // Min: 0.18f, max 0.54f
-        fuelScreen.material.SetFloat("_Fuel", Mathf.Lerp(0.18f, 0.54f, fuel / 100f));
+        fuelScreen.material.SetFloat("_Fuel", Mathf.Lerp(0.18f, 0.54f, Fuel / 100f));
     }
 
     private void HandleMovement()
     {
         // If we dont have any fuel, return early
-        if (fuel <= 0f)
+        if (Fuel <= 0f)
         {
-            fuel = 0f; // Clamp fuel to 0
+            Fuel = 0f; // Clamp fuel to 0
             return; // No fuel, no movement
         }
 
@@ -154,14 +154,14 @@ public class PlayerController : MonoBehaviour
             var particleAmount = (int)(200 * Time.fixedDeltaTime);
             thrusterParticles.Emit(particleAmount);
             // Consume fuel
-            fuel -= fuelConsumptionRate * Time.fixedDeltaTime;
+            Fuel -= fuelConsumptionRate * Time.fixedDeltaTime;
         }
     }
 
     private void HandleSound()
     {
         // If we dont have any fuel, return early
-        if (fuel <= 0f)
+        if (Fuel <= 0f)
         {
             // If sound is playing, stop it
             if (thrustSoundEmitter != null && thrustSoundEmitter.IsPlaying())
@@ -347,6 +347,7 @@ public class PlayerController : MonoBehaviour
     {
         gameStopped = true;
         thrustSoundEmitter.Stop(); // Stop sound emitter
+        GetComponent<LandingManager>().StopSounds(); // Stop landing sound
     }
     public void GameResumed()
     {

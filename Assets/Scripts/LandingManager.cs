@@ -182,8 +182,14 @@ public class LandingManager : MonoBehaviour
             if (timerToLand >= TimeToLand)
             {
                 // Reset the timer and notify the GameManager about the landing
-                currentLandingPoint = null; // Reset the landing point after landing
-                gameManager.Landed(new GameManager.LandingData());
+                currentLandingPoint = null;
+                // Create landing quality data
+                GameManager.LandingData landingQualityData = new GameManager.LandingData
+                {
+                    LandingTime = totalLandTime,
+                    InitialSpeed = initialImpactVelocity,
+                };
+                gameManager.Landed(landingQualityData);
                 RuntimeManager.PlayOneShot(chargeSuccessfulSound, transform.position);
                 timerToLand = 0.0f;
 
@@ -196,6 +202,9 @@ public class LandingManager : MonoBehaviour
         {
             if (chargingFeedback.IsPlaying)
                 chargingFeedback.StopFeedbacks();
+
+            // Still increase the total time
+            totalLandTime += Time.deltaTime;
 
             // Reset the timer if not both legs are grounded
             if (timerToLand >= 0f)
@@ -333,6 +342,19 @@ public class LandingManager : MonoBehaviour
             Debug.LogError("Ship mesh not found in the first child of the ship transform.");
         }
 
+    }
+
+    // ___ PUBLIC METHODS ___
+    public void StopSounds()
+    {
+        // Stop all active feedbacks
+        if (sliderStartFeedback.IsPlaying)
+            sliderStartFeedback.StopFeedbacks();
+        if (sliderStopFeedback.IsPlaying)
+            sliderStopFeedback.StopFeedbacks();
+        if (chargingFeedback.IsPlaying)
+            chargingFeedback.StopFeedbacks();
+        chargeSoundEmitter.Stop();
     }
 
     private void OnDestroy()

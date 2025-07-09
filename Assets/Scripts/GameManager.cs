@@ -9,8 +9,10 @@ public class GameManager : MonoBehaviour
     // ___ PRIVATE FIELDS ___
     [Header("Game Settings")]
     [SerializeField] private Moon[] moons;
+    [SerializeField] private float TimeStep = 0.02f;
     [Space(10)]
     [Header("UI Settings")]
+    [SerializeField] private ResultManager resultManager;
     [SerializeField] private MMF_Player missionCompleteFeedback;
     [Space(2)]
     [SerializeField] private GameObject pauseMenuButton;
@@ -19,10 +21,30 @@ public class GameManager : MonoBehaviour
     [Space(2)]
     [SerializeField] private GameObject missionFailButton;
     [SerializeField] private MMF_Player missionFailFeedback;
-
+    [Space(10)]
+    [Header("Mission Requirements")]
+    [SerializeField] private float minFuelForStar = 20.0f;
+    [Space(2)]
+    [SerializeField] private float maxLandingSpeedForPerfectLanding = 5.0f;
+    [SerializeField] private float maxLandingSpeedForGoodLanding = 10.0f;
+    [Space(2)]
+    [SerializeField] private float maxLandingDurationForPerfectLanding = 1.5f;
+    [SerializeField] private float maxLandingDurationForGoodLanding = 2.5f;
 
     // ___ PRIVATE ___
     private int currentLandingPointIndex = 0;
+
+    // Landing Resources
+    // Just stores them initially to spawn them easier
+    private GameObject badLandingPrefab;
+    private GameObject goodLandingPrefab;
+    private GameObject perfectLandingPrefab;
+
+    // Mission Stats
+    // Used to determine how many stars the player gets at the end of the mission.
+    private bool fuelThreshold = true;
+    private bool noBadLandings = true;
+    private bool perfectLandings = true;
 
     public enum GameState
     {
@@ -56,6 +78,11 @@ public class GameManager : MonoBehaviour
         }
         Instance = this;
 
+
+        // Load the landing prefabs from resources
+        badLandingPrefab = Resources.Load<GameObject>("BadLanding");
+        goodLandingPrefab = Resources.Load<GameObject>("GoodLanding");
+        perfectLandingPrefab = Resources.Load<GameObject>("PerfectLanding");
     }
 
     private void Start()
@@ -79,24 +106,21 @@ public class GameManager : MonoBehaviour
 
     private void Update()
     {
-        if(currentGameState == GameState.Playing || currentGameState == GameState.Paused)
-        {
 
-        }
-        else if(!stopped)
+        if(!stopped && currentGameState == GameState.MissionFail)
         {
             slowDownTimer += Time.deltaTime * slowDownSpeed;
             // Slow down the game if the game state is not playing
             Time.timeScale = Mathf.Lerp(1f, 0f, slowDownTimer);
             // Increase the fixed time step to get smoother slow down
-            Time.fixedDeltaTime = Mathf.Lerp(0.02f, 0.002f, slowDownTimer);
+            Time.fixedDeltaTime = Mathf.Lerp(TimeStep, 0.002f, slowDownTimer);
 
             if(slowDownTimer >= 1.0f)
             {
                 stopped = true;
                 // Make sure the time scale is set to 0 when the game is stopped
                 Time.timeScale = 0f;
-                Time.fixedDeltaTime = 0.02f; // Reset fixed delta time to normal
+                Time.fixedDeltaTime = TimeStep; // Reset fixed delta time to normal
 
                 // Call in the menu
             }
@@ -148,8 +172,6 @@ public class GameManager : MonoBehaviour
         OnNewMoon?.Invoke(CurrentMoon);
         // Set the visuals for the new moon's landing point
         CurrentMoon.LandingPoint.SetVisualsState(true);
-        // Debug the past and new moon
-        Debug.Log($"New Moon Set: {CurrentMoon.gameObject.name} (Index: {currentLandingPointIndex})");
     }
 
     private void MissionComplete()
@@ -158,13 +180,64 @@ public class GameManager : MonoBehaviour
         currentGameState = GameState.MissionComplete;
         // Stop the player
         PlayerController.Instance.GameStopped();
+
+        // Check if the player has enough fuel for a star
+        if (PlayerController.Instance.Fuel < minFuelForStar)
+            fuelThreshold = false;
+
+        // Play the feedback for mission completion
+        missionCompleteFeedback?.PlayFeedbacks();
+
+        StartCoroutine(DelayMissionComplete(1.0f));
+
     }
 
-    private float ValidateLandingQuality(LandingData data)
+    private IEnumerator DelayMissionComplete(float delay)
     {
-        float quality = 0.0f;
+        yield return new WaitForSecondsRealtime(delay);
 
-        return quality;
+        // Give the results to the result manager
+        resultManager.SetStars(fuelThreshold, noBadLandings, perfectLandings);
+        // Start the sequence
+        resultManager.StartSequence();
+    }
+
+    /// <summary>
+    /// Validates the landing quality based on the provided data.
+    /// Also checks if any of the mission stats are broken.
+    /// </summary>
+    private void ValidateLandingQuality(LandingData data)
+    {
+        // Find out if the landing was perfect, good or bad.
+        bool perfectLanding = data.InitialSpeed <= maxLandingSpeedForPerfectLanding && data.LandingTime <= maxLandingDurationForPerfectLanding;
+        bool goodLanding = data.InitialSpeed <= maxLandingSpeedForGoodLanding && data.LandingTime <= maxLandingDurationForGoodLanding;
+
+        // Decide what landing prefab to spawn based on the landing quality
+        GameObject landingPrefab = null;
+        if (perfectLanding)
+        {
+            landingPrefab = perfectLandingPrefab;
+        }
+        else if (goodLanding)
+        {
+            landingPrefab = goodLandingPrefab;
+            perfectLandings = false;
+        }
+        else
+        {
+            landingPrefab = badLandingPrefab;
+            noBadLandings = false;
+            perfectLandings = false;
+        }
+
+        // Spawn the landing prefab at the player's position and rotation
+        if (landingPrefab != null)
+        {
+            Instantiate(landingPrefab, PlayerController.Instance.transform.position, PlayerController.Instance.transform.rotation);
+        }
+
+        // Debug the landing data
+       // Debug.Log($"Initial Speed = {data.InitialSpeed}, Landing Time = {data.LandingTime}");
     }
 
     // ___ PUBLIC METHODS ___
@@ -200,10 +273,8 @@ public class GameManager : MonoBehaviour
 
     public struct LandingData
     {
-        public float InitialAngle; 
         public float InitialSpeed;
-        public float DistanceToLandingPoint; 
-        public float LandingTime; // Time taken to land from grounded state
+        public float LandingTime;
     }
 
     /// <summary>
@@ -211,6 +282,8 @@ public class GameManager : MonoBehaviour
     /// </summary>
     public void Landed(LandingData data)
     {
+        // Validate the landing quality based on the provided data
+        ValidateLandingQuality(data);
         // Activate the landing point visuals
         CurrentMoon.LandingPoint.SetVisualsState(false);
         // Play the flag feedback
@@ -248,7 +321,7 @@ public class GameManager : MonoBehaviour
         currentGameState = GameState.Playing;
         // Resume the time
         Time.timeScale = 1.0f;
-        Time.fixedDeltaTime = 0.02f; 
+        Time.fixedDeltaTime = TimeStep; 
         // Resume the player
         PlayerController.Instance.GameResumed();
         // Play the mission continue feedback
@@ -257,11 +330,13 @@ public class GameManager : MonoBehaviour
 
     public void RestartMission()
     {
+        // Stop Player
+        PlayerController.Instance.GameStopped();
         // Temp Reload scene
         UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
         // Make sure to fix time scale
         Time.timeScale = 1.0f;
-        Time.fixedDeltaTime = 0.02f;
+        Time.fixedDeltaTime = TimeStep;
 
         // This should not be a problem... 
         // But it is...
@@ -276,14 +351,14 @@ public class GameManager : MonoBehaviour
     {
         // Remember to set the time scale back to 1.0f when going back to the menu.
         Time.timeScale = 1.0f;
-        Time.fixedDeltaTime = 0.02f;
+        Time.fixedDeltaTime = TimeStep;
     }
 
     public void GoNextLevel()
     {
         // Remeber to set the time scale back to 1.0f when going to the next level.
         Time.timeScale = 1.0f;
-        Time.fixedDeltaTime = 0.02f;
+        Time.fixedDeltaTime = TimeStep;
     }
     #endregion
 
