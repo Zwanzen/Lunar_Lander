@@ -38,31 +38,52 @@ public class Moon : MonoBehaviour
     public Vector3 Position => moonTransform.position;
     public Transform LandingPointTransform { get; private set; }
     public LandingPoint LandingPoint { get; private set; }
-    // ___ UNITY METHODS ___
+
     private void OnValidate()
     {
         if (Application.isPlaying)
             return;
 
-        // If reGenerateMoon is true, reset the moon
-        if(reGenerateMoon)
+        // If reGenerateMoon is true, reset the moon  
+        if (reGenerateMoon)
         {
-            reGenerateMoon = false; // Reset the flag
-            if(PhysicsManager.Instance != null)
+            reGenerateMoon = false; // Reset the flag  
+            if (PhysicsManager.Instance != null)
             {
                 PhysicsManager.Instance.ClearGravitySources();
             }
-            Destroy(moonTransform?.gameObject); // Destroy the old moon transform
-            Destroy(LandingPointTransform?.gameObject); // Destroy the old landing point transform
+
+#if UNITY_EDITOR
+            EditorApplication.delayCall += PerformDestroy;
+#endif
+            return; // Exit early to avoid further processing
         }
 
-        // Make sure the angle is not above 360 degrees or below 0 degrees.
+        // Make sure the angle is not above 360 degrees or below 0 degrees.  
         landingPointAngle = Mathf.Repeat(landingPointAngle, 360f);
 
         ValidateMoonTransform();
         ManageLandingPoint();
         RegisterGravitySource();
         GenerateDottedRadius();
+    }
+
+    private void PerformDestroy()
+    {
+        // Check if the object still exists before destroying (important if called multiple times or after a scene reload)
+        if (moonTransform != null && moonTransform.gameObject != null)
+        {
+            DestroyImmediate(moonTransform?.gameObject); // Destroy the old moon transform
+        }
+
+        if (LandingPointTransform != null && LandingPointTransform.gameObject != null)
+        {
+            DestroyImmediate(LandingPointTransform?.gameObject); // Destroy the old landing point transform
+        }
+
+#if UNITY_EDITOR
+        EditorApplication.delayCall -= PerformDestroy;
+#endif
     }
 
     private void Awake()
@@ -255,7 +276,6 @@ public class Moon : MonoBehaviour
     /// </summary>
     private void GenerateDottedRadius()
     {
-        return;
         LineRenderer lineRenderer = moonTransform.GetComponent<LineRenderer>();
         if (lineRenderer == null)
         {
@@ -268,7 +288,7 @@ public class Moon : MonoBehaviour
         lineRenderer.useWorldSpace = true; // Use world space for positions
         lineRenderer.startWidth = 1f;
         lineRenderer.endWidth = 1f;
-        lineRenderer.widthMultiplier = 3f;
+        lineRenderer.widthMultiplier = 0.5f;
         float angleStep = 360f / lineRenderer.positionCount;
         for (int i = 0; i < lineRenderer.positionCount; i++)
         {

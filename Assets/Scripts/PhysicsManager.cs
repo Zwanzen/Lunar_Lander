@@ -198,11 +198,20 @@ public class PhysicsManager : MonoBehaviour
     // ___ Gizmo Visualization ___
     private void OnDrawGizmos()
     {
+
         if (!showGravityRanges && !showGravityStrength)
             return;
 
         foreach (KeyValuePair<Transform, GravitySource> pair in gravitySources)
         {
+
+            // Check if the transform is null
+            if (pair.Key == null)
+            {
+                // Clear the dictionary
+                gravitySources.Clear();
+                break;
+            }
 
             var source = pair.Value;
 
