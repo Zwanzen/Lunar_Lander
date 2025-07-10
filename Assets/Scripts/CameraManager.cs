@@ -25,14 +25,10 @@ public class CameraManager : MonoBehaviour
         Bounce
     }
 
-    [Tooltip("Select the type of rotation effect")]
-    [SerializeField] private RotationEffectType rotationEffectType = RotationEffectType.Linear;
+
 
     // Parameters for effects
     [Range(0, 1)]
-    [SerializeField] private float easingPower = 0.5f;
-    [SerializeField] private float elasticAmplitude = 1.0f;
-    [SerializeField] private float elasticPeriod = 0.3f;
     [SerializeField] private float bounceAmplitude = 1.0f;
 
     // Keeps track of rotation progress

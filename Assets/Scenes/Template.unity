@@ -6323,7 +6323,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 351879978}
         m_TargetAssemblyTypeName: GameManager, Assembly-CSharp
-        m_MethodName: RestartMission
+        m_MethodName: GoNextLevel
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -9882,10 +9882,6 @@ MonoBehaviour:
   rotationSpeed: 1
   cameraTransform: {fileID: 1311485391}
   targetGroup: {fileID: 2060109689}
-  rotationEffectType: 3
-  easingPower: 0
-  elasticAmplitude: 1
-  elasticPeriod: 0.3
   bounceAmplitude: 1
 --- !u!4 &1645919723
 Transform:

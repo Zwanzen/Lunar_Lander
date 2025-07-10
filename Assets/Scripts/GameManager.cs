@@ -185,6 +185,16 @@ public class GameManager : MonoBehaviour
         if (PlayerController.Instance.Fuel < minFuelForStar)
             fuelThreshold = false;
 
+        // Get the scene index to save the level data
+        int levelIndex = UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex - 1; // Assuming the first scene is the menu
+        // Save the level data
+        LevelManager.Instance.SaveData(levelIndex, new LevelData
+        {
+            star1 = fuelThreshold,
+            star2 = noBadLandings,
+            star3 = perfectLandings
+        });
+
         // Play the feedback for mission completion
         missionCompleteFeedback?.PlayFeedbacks();
 
@@ -352,6 +362,8 @@ public class GameManager : MonoBehaviour
         // Remember to set the time scale back to 1.0f when going back to the menu.
         Time.timeScale = 1.0f;
         Time.fixedDeltaTime = TimeStep;
+        // Load index 0 scene
+        UnityEngine.SceneManagement.SceneManager.LoadScene(0);
     }
 
     public void GoNextLevel()
@@ -359,6 +371,13 @@ public class GameManager : MonoBehaviour
         // Remeber to set the time scale back to 1.0f when going to the next level.
         Time.timeScale = 1.0f;
         Time.fixedDeltaTime = TimeStep;
+
+        // If there is a next level, load it
+        int currentSceneIndex = UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex;
+        if (currentSceneIndex < LevelManager.LevelCount)
+        {
+            UnityEngine.SceneManagement.SceneManager.LoadScene(currentSceneIndex + 1);
+        }
     }
     #endregion
 
