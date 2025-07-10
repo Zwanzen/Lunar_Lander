@@ -11,7 +11,7 @@ public class LevelManager : MonoBehaviour
     public static LevelManager Instance;
 
     // ___ PUBLIC PROPERTIES ___
-    public const int LevelCount = 9; 
+    public const int LevelCount = 6; 
 
     private void Awake()
     {
@@ -109,13 +109,6 @@ public class LevelManager : MonoBehaviour
         // Get the level data for the specified index
         data = saveDataModel.levelDatas[levelIndex];
         return true;
-    }
-
-    // For convinience
-    public void QuitGame()
-    {
-        Application.Quit();
-
     }
 
 }

@@ -23,6 +23,7 @@ public class Moon : MonoBehaviour
     [SerializeField] float maxPoint = 0.4f; // Point in range [0-1] where gravity is maximum (0 = at source, 1 = at edge)
     [Space(10)]
     [Header("Moon Lading")]
+    [SerializeField] private bool hasLandingPoint = true; 
     [SerializeField] private float landingPointAngle = 0f;
     [SerializeField] private float moonSize = 100f; // Used to raycast the surface of the moon.
     [Space(20)]
@@ -100,10 +101,17 @@ public class Moon : MonoBehaviour
         // Get landing point transform from the second child if it exists.
         if (transform.childCount > 1)
         {
+            // If we dont use landing points, we can skip this.
+            if (!hasLandingPoint)
+            {
+                LandingPointTransform = null;
+                LandingPoint = null;
+                return;
+            }
             LandingPointTransform = transform.GetChild(1);
             LandingPoint = LandingPointTransform.GetComponent<LandingPoint>();
         }
-        else
+        else if (hasLandingPoint)
         {
             Debug.LogError("Landing Point Transform is not set. Please validate the landing point transform.");
         }
@@ -159,6 +167,14 @@ public class Moon : MonoBehaviour
     private RaycastHit[] moonSurfaceColliders = new RaycastHit[10];
     private void ManageLandingPoint()
     {
+        if (!hasLandingPoint)
+        {
+            // If the moon does not have a landing point, return early.
+            LandingPointTransform = null;
+            LandingPoint = null;
+            return;
+        }
+
         // Place the landing point at the surface of the moon,
         // from the angle specified and the moon's position.
         if (moonTransform == null)
